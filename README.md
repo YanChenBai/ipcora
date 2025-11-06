@@ -6,7 +6,7 @@
 
 - 🚀 端到端类型安全
 - ⚡ 简单易用
-- 📦 支持 Schema 验证 (使用 TypeBox)
+- 📦 支持 Schema 验证 (内置 TypeBox，支持 Standard Schema)
 - 🔧 灵活的 API 设计
 
 ## 📦 安装
@@ -37,51 +37,40 @@ TypeIpc 提供了两种主要的通信模式：
 ```typescript
 // main.ts
 import type { Infer } from 'type-ipc/main'
-import { Type } from '@sinclair/typebox'
+import { app, BrowserWindow } from 'electron'
 import { defineEmitter, defineHandler, registerEmitters, registerHandlers } from 'type-ipc/main'
+import { t } from 'type-ipc/typebox'
 
-// 定义 Handler - 用于处理从渲染进程发来的请求
-export const handlers = defineHandler('test', {
-  // 不带参数的函数
-  ping: () => {
-    console.log('pong')
-    return 'pong'
-  },
-
-  // 带参数的函数
-  greet: (event, name: string) => {
-    return `Hello, ${name}!`
-  },
-
-  // 使用 TypeBox schema 验证参数
-  add: (event, data: { a: number, b: number }) => {
+export const demoHandler = defineHandler('demo', {
+  add: (_event, data) => {
     return data.a + data.b
-  }
+  },
 }, {
-  // 对应的 TypeBox schema（可选）
   add: {
-    data: Type.Object({
-      a: Type.Number(),
-      b: Type.Number()
+    data: t.Object({
+      a: t.Number(),
+      b: t.Number(),
     }),
-    return: Type.Number()
-  }
+    return: t.Number(),
+  },
 })
 
-// 定义 Sender - 用于向渲染进程发送消息
-export const createTestSender = defineEmitter('test', {
-  // 定义可以发送的消息类型
-  updateData: Type.String()
+export const createDemoEmitter = defineEmitter('demo', {} as { Update: string })
+
+export const handlers = registerHandlers(demoHandler)
+export const emitters = registerEmitters(createDemoEmitter)
+
+// 初始化 ipc
+handlers.appWhenReadyStart()
+
+// 向渲染进程发送消息
+app.whenReady().then(() => {
+  const win = new BrowserWindow()
+  const emit = createDemoEmitter(win.webContents)
+
+  emit.Update('hello world')
 })
 
-// 注册 handlers 和 senders
-const handlers = registerHandlers(handlers)
-const emitters = registerEmitters(createTestEmitter)
-
-// 启动 IPC 监听
-registeredHandlers.start()
-
-// 导出类型供渲染进程使用
 export type Invoke = Infer<typeof handlers>
 export type Message = Infer<typeof emitters>
 ```
@@ -104,60 +93,17 @@ import type { Invoke, Message } from '../main/main'
 import { createIpcInvoke, createIpcMessage } from 'type-ipc/renderer'
 
 // 创建 IPC 调用和消息监听实例
-export const ipcInvoke = createIpcInvoke<Invoke>()
-export const ipcMessage = createIpcMessage<Message>()
-```
+const ipcInvoke = createIpcInvoke<Invoke>()
+const ipcMessage = createIpcMessage<Message>()
 
-```vue
-<!-- 在 Vue 组件中使用 -->
-<script setup lang="ts">
-import { ipcInvoke, ipcMessage } from './ipc'
-
-// 调用主进程函数
-async function handleClick() {
-  // 调用无参数函数
-  const pong = await ipcInvoke.test.ping()
-  console.log(pong) // 'pong'
-
-  // 调用带参数函数
-  const greeting = await ipcInvoke.test.greet('World')
-  console.log(greeting) // 'Hello, World!'
-
-  // 调用带验证的函数
-  const sum = await ipcInvoke.test.add({ a: 1, b: 2 })
-  console.log(sum) // 3
-}
+// 调用主进程
+const res = await ipcInvoke.test.greet({ a: 1, b: 2 })
+console.log(res) // { error: null, data: 3 }
 
 // 监听主进程发送的消息
 ipcMessage.test.onUpdateData((data) => {
   console.log('Received data:', data)
 })
-
-// 只监听一次主进程发送的消息
-ipcMessage.test.onceUpdateData((data) => {
-  console.log('Received data:', data)
-})
-</script>
-
-<template>
-  <button @click="handleClick">
-    Send IPC
-  </button>
-</template>
-```
-
-### 从主进程发送消息到渲染进程
-
-```typescript
-// 在主进程中
-import { BrowserWindow } from 'electron'
-import { broadcastToWebContents } from 'type-ipc/main'
-
-// 创建发送器实例
-const emitter = createTestEmitter(someBrowserWindow.webContents)
-
-// 发送消息
-emitter.updateData('Hello from main process!')
 ```
 
 ## 📚 API 介绍
