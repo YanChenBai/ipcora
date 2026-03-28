@@ -16,6 +16,29 @@
     "dist"
   ],
   "type": "module",
+  "exports": {
+    ".": {
+      "dev": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./main": {
+      "dev": "./src/main/index.ts",
+      "default": "./dist/main.mjs"
+    },
+    "./preload": {
+      "dev": "./src/preload.ts",
+      "default": "./dist/preload.js"
+    },
+    "./renderer": {
+      "dev": "./src/renderer.ts",
+      "default": "./dist/renderer.js"
+    },
+    "./typebox": {
+      "dev": "./src/typebox.ts",
+      "default": "./dist/typebox.mjs"
+    },
+    "./package.json": "./package.json"
+  },
   "publishConfig": {
     "access": "public",
     "exports": {
@@ -58,28 +81,5 @@
   "peerDependencies": {
     "electron": ">=37.0.0"
   },
-  "packageManager": "pnpm@10.33.0",
-  "exports": {
-    ".": {
-      "dev": "./src/index.ts",
-      "default": "./dist/index.js"
-    },
-    "./main": {
-      "dev": "./src/main/index.ts",
-      "default": "./dist/main.mjs"
-    },
-    "./preload": {
-      "dev": "./src/preload.ts",
-      "default": "./dist/preload.js"
-    },
-    "./renderer": {
-      "dev": "./src/renderer.ts",
-      "default": "./dist/renderer.js"
-    },
-    "./typebox": {
-      "dev": "./src/typebox.ts",
-      "default": "./dist/typebox.mjs"
-    },
-    "./package.json": "./package.json"
-  }
+  "packageManager": "pnpm@10.33.0"
 }

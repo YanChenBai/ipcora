@@ -1,9 +1,9 @@
-import process from "node:process";
+import process from 'node:process';
 
-import type { Infer } from "type-ipc/main";
-import { defineEmitter, defineHandler, registerEmitters, registerHandlers } from "type-ipc/main";
+import type { Infer } from 'type-ipc/main';
+import { defineEmitter, defineHandler, registerEmitters, registerHandlers } from 'type-ipc/main';
 
-export const testHandler = defineHandler("test", {
+export const testHandler = defineHandler('test', {
   ping: (_event, data: string) => {
     // eslint-disable-next-line no-console
     console.log(data);
@@ -19,7 +19,7 @@ export const testHandler = defineHandler("test", {
   },
 });
 
-export const createTestEmitter = defineEmitter("test", {} as { Update: string });
+export const createTestEmitter = defineEmitter('test', {} as { Update: string });
 
 export const handlers = registerHandlers(testHandler);
 export const emitters = registerEmitters(createTestEmitter);

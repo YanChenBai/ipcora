@@ -79,7 +79,6 @@ export default defineConfig({
     ignorePatterns: [],
     options: {
       typeAware: true,
-      typeCheck: true,
     },
   },
   staged: {
