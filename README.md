@@ -36,74 +36,78 @@ TypeIpc 提供了两种主要的通信模式：
 
 ```typescript
 // main.ts
-import type { Infer } from 'type-ipc/main'
-import { app, BrowserWindow } from 'electron'
-import { defineEmitter, defineHandler, registerEmitters, registerHandlers } from 'type-ipc/main'
-import { t } from 'type-ipc/typebox'
+import type { Infer } from 'type-ipc/main';
+import { app, BrowserWindow } from 'electron';
+import { defineEmitter, defineHandler, registerEmitters, registerHandlers } from 'type-ipc/main';
+import { t } from 'type-ipc/typebox';
 
-export const demoHandler = defineHandler('demo', {
-  add: (_event, data) => {
-    return data.a + data.b
+export const demoHandler = defineHandler(
+  'demo',
+  {
+    add: (_event, data) => {
+      return data.a + data.b;
+    },
   },
-}, {
-  add: {
-    data: t.Object({
-      a: t.Number(),
-      b: t.Number(),
-    }),
-    return: t.Number(),
+  {
+    add: {
+      data: t.Object({
+        a: t.Number(),
+        b: t.Number(),
+      }),
+      return: t.Number(),
+    },
   },
-})
+);
 
-export const createDemoEmitter = defineEmitter('demo', {} as { Update: string })
+export const createDemoEmitter = defineEmitter('demo', {} as { Update: string });
 
-export const handlers = registerHandlers(demoHandler)
-export const emitters = registerEmitters(createDemoEmitter)
+export const handlers = registerHandlers(demoHandler);
+export const emitters = registerEmitters(createDemoEmitter);
 
 // 初始化 ipc
-handlers.appWhenReadyStart()
+handlers.appWhenReadyStart();
 
 // 向渲染进程发送消息
 app.whenReady().then(() => {
-  const win = new BrowserWindow()
-  const emit = createDemoEmitter(win.webContents)
+  const win = new BrowserWindow();
+  const emit = createDemoEmitter(win.webContents);
 
-  emit.Update('hello world')
-})
+  emit.Update('hello world');
+});
 
-export type Invoke = Infer<typeof handlers>
-export type Message = Infer<typeof emitters>
+export type Invoke = Infer<typeof handlers>;
+export type Message = Infer<typeof emitters>;
 ```
 
 ### 预加载进程 (Preload Process)
 
 ```typescript
 // preload.ts
-import { exposeTypeIpc } from 'type-ipc/preload'
+import { exposeTypeIpc } from 'type-ipc/preload';
 
 // 将 IPC 方法暴露给渲染进程
-exposeTypeIpc()
+exposeTypeIpc();
 ```
 
 ### 渲染进程 (Renderer Process)
 
 ```typescript
 // ipc.ts
-import type { Invoke, Message } from '../main/main'
-import { createIpcInvoke, createIpcMessage } from 'type-ipc/renderer'
+import type { Invoke, Message } from '../main/main';
+import { createIpcInvoke, createIpcMessage } from 'type-ipc/renderer';
 
 // 创建 IPC 调用和消息监听实例
-const ipcInvoke = createIpcInvoke<Invoke>()
-const ipcMessage = createIpcMessage<Message>()
+const ipcInvoke = createIpcInvoke<Invoke>();
+const ipcMessage = createIpcMessage<Message>();
 
 // 调用主进程
-const res = await ipcInvoke.test.greet({ a: 1, b: 2 })
-console.log(res) // { error: null, data: 3 }
+const res = await ipcInvoke.test.greet({ a: 1, b: 2 });
+console.log(res); // { error: null, data: 3 }
 
 // 监听主进程发送的消息
 ipcMessage.test.onUpdateData((data) => {
-  console.log('Received data:', data)
-})
+  console.log('Received data:', data);
+});
 ```
 
 ## 📚 API 介绍
@@ -150,14 +154,14 @@ const createTestEmitter = defineEmitter('test', {
   updateUser: Type.String(),
   updateConfig: Type.Object({
     theme: Type.String(),
-    language: Type.String()
-  })
-})
+    language: Type.String(),
+  }),
+});
 
 // 使用时
-const emitter = createTestEmitter(someBrowserWindow)
-emitter.updateUser('John') // 发送消息
-emitter.updateConfig({ theme: 'dark', language: 'en' })
+const emitter = createTestEmitter(someBrowserWindow);
+emitter.updateUser('John'); // 发送消息
+emitter.updateConfig({ theme: 'dark', language: 'en' });
 ```
 
 ### registerHandlers(...handlers)

@@ -1,27 +1,28 @@
-import type { Infer } from 'type-ipc/main'
-import process from 'node:process'
-import { defineEmitter, defineHandler, registerEmitters, registerHandlers } from 'type-ipc/main'
+import process from "node:process";
 
-export const testHandler = defineHandler('test', {
+import type { Infer } from "type-ipc/main";
+import { defineEmitter, defineHandler, registerEmitters, registerHandlers } from "type-ipc/main";
+
+export const testHandler = defineHandler("test", {
   ping: (_event, data: string) => {
     // eslint-disable-next-line no-console
-    console.log(data)
+    console.log(data);
   },
   getVersions() {
-    const { electron, chrome, node } = process.versions
+    const { electron, chrome, node } = process.versions;
 
     return {
       electron,
       chrome,
       node,
-    }
+    };
   },
-})
+});
 
-export const createTestEmitter = defineEmitter('test', {} as { Update: string })
+export const createTestEmitter = defineEmitter("test", {} as { Update: string });
 
-export const handlers = registerHandlers(testHandler)
-export const emitters = registerEmitters(createTestEmitter)
+export const handlers = registerHandlers(testHandler);
+export const emitters = registerEmitters(createTestEmitter);
 
-export type Invoke = Infer<typeof handlers>
-export type Message = Infer<typeof emitters>
+export type Invoke = Infer<typeof handlers>;
+export type Message = Infer<typeof emitters>;

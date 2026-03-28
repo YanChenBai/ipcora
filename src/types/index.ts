@@ -1,2 +1,2 @@
-export * from './ipc'
-export * from './schema'
+export * from './ipc';
+export * from './schema';

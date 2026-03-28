@@ -12,4 +12,4 @@ export default {
     ci: { title: '🤖 CI' },
     revert: { title: '⏪ Revert' },
   },
-}
+};

@@ -1,3 +1,3 @@
-import { exposeTypeIpc } from 'type-ipc/preload'
+import { exposeTypeIpc } from 'type-ipc/preload';
 
-exposeTypeIpc()
+exposeTypeIpc();

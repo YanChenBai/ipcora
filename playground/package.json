@@ -1,10 +1,10 @@
 {
   "name": "playground",
-  "type": "module",
   "version": "1.0.0",
   "description": "An Electron application with Vue and TypeScript",
-  "author": "example.com",
   "homepage": "https://electron-vite.org",
+  "author": "example.com",
+  "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
     "lint": "eslint --cache .",
@@ -27,20 +27,15 @@
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^1.0.1",
-    "@types/node": "^22.16.5",
-    "@vitejs/plugin-vue": "^6.0.0",
-    "electron": "^37.4.0",
+    "@types/node": "^22.19.15",
+    "@vitejs/plugin-vue": "^6.0.5",
+    "electron": "^37.10.3",
     "electron-builder": "^25.1.8",
-    "electron-vite": "^4.0.0",
-    "typescript": "^5.8.3",
-    "vite": "^7.0.5",
-    "vue": "^3.5.17",
-    "vue-tsc": "^3.0.3"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "electron",
-      "esbuild"
-    ]
+    "electron-vite": "^4.0.1",
+    "typescript": "^5.9.3",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "vue": "^3.5.31",
+    "vue-tsc": "^3.2.6"
   }
 }
