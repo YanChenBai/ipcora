@@ -1,44 +1,44 @@
-import { defineConfig } from "vite-plus";
+import { defineConfig } from 'vite-plus';
 
 export default defineConfig({
   pack: [
     {
       entry: {
-        renderer: "./src/renderer.ts",
-        preload: "./src/preload.ts",
-        index: "./src/index.ts",
+        renderer: './src/renderer.ts',
+        preload: './src/preload.ts',
+        index: './src/index.ts',
       },
-      platform: "browser",
-      format: "esm",
+      platform: 'browser',
+      format: 'esm',
       dts: true,
       deps: {
-        neverBundle: ["electron"],
+        neverBundle: ['electron'],
       },
       exports: {
-        devExports: "dev",
+        devExports: 'dev',
       },
     },
     {
       entry: {
-        main: "./src/main/index.ts",
-        typebox: "./src/typebox.ts",
+        main: './src/main/index.ts',
+        typebox: './src/typebox.ts',
       },
-      platform: "node",
-      format: "esm",
+      platform: 'node',
+      format: 'esm',
       dts: true,
       deps: {
-        neverBundle: ["electron"],
+        neverBundle: ['electron'],
       },
       exports: {},
     },
   ],
   test: {
-    environment: "jsdom",
+    environment: 'jsdom',
     ui: true,
     typecheck: {
       enabled: true,
     },
-    include: ["./tests/**/*.test.ts"],
+    include: ['./tests/**/*.test.ts'],
   },
   fmt: {
     ignorePatterns: [],
@@ -50,8 +50,8 @@ export default defineConfig({
     categories: {},
     rules: {},
     settings: {
-      "jsx-a11y": {
-        polymorphicPropName: "as",
+      'jsx-a11y': {
+        polymorphicPropName: 'as',
         components: {},
         attributes: {},
       },
@@ -81,5 +81,8 @@ export default defineConfig({
       typeAware: true,
       typeCheck: true,
     },
+  },
+  staged: {
+    '*': 'vp check --fix',
   },
 });
