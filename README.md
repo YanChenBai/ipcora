@@ -17,7 +17,7 @@ vp add @ipcora/electron electron
 ## Core Usage
 
 ```ts
-import { createIpcora, type IpcTransport } from "@ipcora/core";
+import { createIpcora, type IpcTransport } from '@ipcora/core';
 
 const transport: IpcTransport = {
   handle(channel, handler) {
@@ -32,9 +32,9 @@ const transport: IpcTransport = {
 };
 
 const ipc = createIpcora<{ tenant: string }>({
-  channel: "ipcora:invoke",
+  channel: 'ipcora:invoke',
   transport,
-}).handler("ping", ({ context }) => {
+}).handler('ping', ({ context }) => {
   return { pong: context.tenant };
 });
 ```
@@ -42,19 +42,19 @@ const ipc = createIpcora<{ tenant: string }>({
 ## Electron Usage
 
 ```ts
-import { BrowserWindow, ipcMain } from "electron";
-import { bindBrowserWindow, createElectronIpcora } from "@ipcora/electron";
+import { BrowserWindow, ipcMain } from 'electron';
+import { bindBrowserWindow, createElectronIpcora } from '@ipcora/electron';
 
 const ipc = createElectronIpcora<{ tenant: string }>({
-  channel: "ipcora:invoke",
+  channel: 'ipcora:invoke',
   ipcMain,
-}).handler("ping", ({ context }) => {
+}).handler('ping', ({ context }) => {
   return { pong: context.tenant };
 });
 
 const win = new BrowserWindow();
 bindBrowserWindow(ipc, win, {
-  context: { tenant: "acme" },
+  context: { tenant: 'acme' },
 });
 ```
 

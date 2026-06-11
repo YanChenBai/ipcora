@@ -1,5 +1,5 @@
-export { createIpcError, IpcError } from "./errors";
-export { createIpcora, Ipcora } from "./router";
+export { createIpcError, IpcError } from './errors';
+export { createIpcora, Ipcora } from './router';
 
 export type {
   AnySchema,
@@ -32,4 +32,4 @@ export type {
   ResolveHook,
   RuntimeContext,
   StandardSchemaV1,
-} from "./types";
+} from './types';

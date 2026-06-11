@@ -43,10 +43,10 @@
     "@ipcora/core": "workspace:^"
   },
   "devDependencies": {
-    "@types/node": "^24.12.0",
-    "bumpp": "^11.0.1",
-    "electron": "^41.1.0",
-    "typescript": "^6.0.2",
+    "@types/node": "catalog:",
+    "bumpp": "catalog:",
+    "electron": "catalog:",
+    "typescript": "catalog:",
     "vite-plus": "catalog:",
     "vitest": "catalog:"
   },

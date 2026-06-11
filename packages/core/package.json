@@ -40,14 +40,14 @@
     "prepublishOnly": "vp run build"
   },
   "dependencies": {
-    "@standard-schema/spec": "^1.1.0",
-    "arktype": "^2.2.0",
-    "pika-events": "^0.0.1"
+    "@standard-schema/spec": "catalog:",
+    "arktype": "catalog:",
+    "pika-events": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "^24.12.0",
-    "bumpp": "^11.0.1",
-    "typescript": "^6.0.2",
+    "@types/node": "catalog:",
+    "bumpp": "catalog:",
+    "typescript": "catalog:",
     "vite-plus": "catalog:",
     "vitest": "catalog:"
   }

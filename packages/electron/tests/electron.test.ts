@@ -1,11 +1,11 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from 'vitest';
 
 import {
   bindBrowserWindow,
   createBrowserWindowPeer,
   createElectronIpcora,
   createElectronTransport,
-} from "../src";
+} from '../src';
 
 function createIpcMain() {
   const handlers = new Map<string, (event: unknown, request: unknown) => unknown>();
@@ -30,27 +30,27 @@ function createWindow(id = 1) {
   };
 }
 
-describe("@ipcora/electron", () => {
-  test("adapts ipcMain to an ipcora transport", async () => {
+describe('@ipcora/electron', () => {
+  test('adapts ipcMain to an ipcora transport', async () => {
     const { handlers, ipcMain } = createIpcMain();
     const transport = createElectronTransport(ipcMain as never);
 
-    transport.handle("test", (_event, request) => ({ id: request.id, ok: true, data: "ok" }));
+    transport.handle('test', (_event, request) => ({ id: request.id, ok: true, data: 'ok' }));
 
     await expect(
-      Promise.resolve(handlers.get("test")?.({ sender: { id: 1 } }, { id: "1" })),
+      Promise.resolve(handlers.get('test')?.({ sender: { id: 1 } }, { id: '1' })),
     ).resolves.toEqual({
-      id: "1",
+      id: '1',
       ok: true,
-      data: "ok",
+      data: 'ok',
     });
-    expect(transport.listenerCount("test")).toBe(1);
+    expect(transport.listenerCount('test')).toBe(1);
 
-    transport.removeHandler("test");
-    expect(transport.listenerCount("test")).toBe(0);
+    transport.removeHandler('test');
+    expect(transport.listenerCount('test')).toBe(0);
   });
 
-  test("creates peers from BrowserWindow-like objects", () => {
+  test('creates peers from BrowserWindow-like objects', () => {
     const window = createWindow(7);
     const peer = createBrowserWindowPeer(window as never);
 
@@ -59,24 +59,24 @@ describe("@ipcora/electron", () => {
 
     const dispose = vi.fn();
     peer.onDispose?.(dispose);
-    expect(window.once).toHaveBeenCalledWith("closed", dispose);
+    expect(window.once).toHaveBeenCalledWith('closed', dispose);
   });
 
-  test("binds BrowserWindow peers to an ipcora instance", async () => {
+  test('binds BrowserWindow peers to an ipcora instance', async () => {
     const { handlers, ipcMain } = createIpcMain();
     const ipcora = createElectronIpcora<{ tenant: string }>({
-      channel: "test:electron",
+      channel: 'test:electron',
       ipcMain: ipcMain as never,
-    }).handler("ping", ({ tenant }) => tenant);
+    }).handler('ping', ({ tenant }) => tenant);
 
-    bindBrowserWindow(ipcora, createWindow(1) as never, { context: { tenant: "acme" } });
+    bindBrowserWindow(ipcora, createWindow(1) as never, { context: { tenant: 'acme' } });
 
     await expect(
-      handlers.get("test:electron")?.({ sender: { id: 1 } }, { id: "1", path: "ping" }),
+      handlers.get('test:electron')?.({ sender: { id: 1 } }, { id: '1', path: 'ping' }),
     ).resolves.toEqual({
-      id: "1",
+      id: '1',
       ok: true,
-      data: "acme",
+      data: 'acme',
     });
   });
 });

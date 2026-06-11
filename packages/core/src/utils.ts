@@ -1,19 +1,19 @@
-import { createIpcError } from "./errors";
-import type { AnySchema, HookStore } from "./types";
+import { createIpcError } from './errors';
+import type { AnySchema, HookStore } from './types';
 
 export const builtInHandlerOptionKeys = new Set([
-  "params",
-  "output",
-  "onRequest",
-  "onTransform",
-  "derive",
-  "resolve",
-  "onGuard",
-  "onBeforeHandle",
-  "onAfterHandle",
-  "onMapResponse",
-  "onError",
-  "onAfterResponse",
+  'params',
+  'output',
+  'onRequest',
+  'onTransform',
+  'derive',
+  'resolve',
+  'onGuard',
+  'onBeforeHandle',
+  'onAfterHandle',
+  'onMapResponse',
+  'onError',
+  'onAfterResponse',
 ]);
 
 export function emptyHooks<TContext extends object, TStore extends object>(): HookStore<
@@ -53,18 +53,18 @@ export function cloneHooks<TContext extends object, TStore extends object>(
 
 export function joinPath(...parts: string[]): string {
   return parts
-    .flatMap(part => part.split("."))
+    .flatMap(part => part.split('.'))
     .map(part => part.trim())
     .filter(Boolean)
-    .join(".");
+    .join('.');
 }
 
 export async function parseSchema(schema: AnySchema | undefined, value: unknown): Promise<unknown> {
   if (!schema) return value;
-  const result = await schema["~standard"].validate(value);
-  if ("issues" in result && result.issues) {
-    throw createIpcError("VALIDATION_ERROR", {
-      message: result.issues.map(issue => issue.message).join("; "),
+  const result = await schema['~standard'].validate(value);
+  if ('issues' in result && result.issues) {
+    throw createIpcError('VALIDATION_ERROR', {
+      message: result.issues.map(issue => issue.message).join('; '),
       data: result.issues,
     });
   }
@@ -72,6 +72,6 @@ export async function parseSchema(schema: AnySchema | undefined, value: unknown)
 }
 
 export function normalizeObjectParams(keyOrObject: string | object, value: unknown): object {
-  if (typeof keyOrObject === "string") return { [keyOrObject]: value };
+  if (typeof keyOrObject === 'string') return { [keyOrObject]: value };
   return keyOrObject;
 }

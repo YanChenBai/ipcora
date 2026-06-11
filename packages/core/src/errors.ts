@@ -16,7 +16,7 @@ export class IpcError<TCode extends string = string, TData = unknown> extends Er
     },
   ) {
     super(options?.message ?? code, { cause: options?.cause });
-    this.name = "IpcError";
+    this.name = 'IpcError';
     this.code = code;
     this.data = options?.data;
     this.status = options?.status;

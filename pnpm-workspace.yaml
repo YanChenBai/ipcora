@@ -1,24 +1,30 @@
 packages:
   - packages/*
-
 onlyBuiltDependencies:
   - electron
   - esbuild
-
-catalog:
-  vite: npm:@voidzero-dev/vite-plus-core@latest
-  vitest: npm:@voidzero-dev/vite-plus-test@latest
-  vite-plus: ^0.1.24
 overrides:
-  vite: "catalog:"
-  vitest: "catalog:"
+  vite: 'catalog:'
+  vitest: 'catalog:'
 peerDependencyRules:
   allowAny:
     - vite
     - vitest
   allowedVersions:
-    vite: "*"
-    vitest: "*"
+    vite: '*'
+    vitest: '*'
 allowBuilds:
   electron: true
   esbuild: true
+catalog:
+  '@standard-schema/spec': ^1.1.0
+  '@typescript/native-preview': 7.0.0-dev.20260509.2
+  arktype: ^2.2.0
+  bumpp: ^11.1.0
+  electron: ^41.7.2
+  pika-events: ^0.0.1
+  typescript: ^6.0.3
+  vite: npm:@voidzero-dev/vite-plus-core@latest
+  vite-plus: ^0.1.24
+  vitest: npm:@voidzero-dev/vite-plus-test@^0.1.24
+  '@types/node': ^24.13.1

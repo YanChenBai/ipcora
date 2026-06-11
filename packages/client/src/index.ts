@@ -61,7 +61,7 @@ export function createClient<TDefinition extends object>(
 interface ProxyContext {
   node: unknown;
   path: string[];
-  invoke: CreateClientOptions["invoke"];
+  invoke: CreateClientOptions['invoke'];
 }
 
 function createProxy(context: ProxyContext): unknown {
@@ -69,23 +69,23 @@ function createProxy(context: ProxyContext): unknown {
 
   return new Proxy(target, {
     get(_target, property) {
-      if (property === "then") {
+      if (property === 'then') {
         return undefined;
       }
 
       if (property === Symbol.toStringTag) {
-        return "IpcoraClient";
+        return 'IpcoraClient';
       }
 
-      if (property === Symbol.for("nodejs.util.inspect.custom")) {
+      if (property === Symbol.for('nodejs.util.inspect.custom')) {
         return () => {
-          const channel = context.path.join(".");
+          const channel = context.path.join('.');
 
-          return channel ? `[IpcoraClient ${channel}]` : "[IpcoraClient]";
+          return channel ? `[IpcoraClient ${channel}]` : '[IpcoraClient]';
         };
       }
 
-      if (typeof property !== "string") {
+      if (typeof property !== 'string') {
         return undefined;
       }
 
@@ -108,16 +108,16 @@ function createProxy(context: ProxyContext): unknown {
 
     apply(_target, _thisArg, args) {
       if (context.path.length === 0) {
-        throw new TypeError("The root client cannot be called directly");
+        throw new TypeError('The root client cannot be called directly');
       }
 
-      if (typeof context.node !== "function") {
+      if (typeof context.node !== 'function') {
         throw new TypeError(`"${formatPath(context.path)}" is a namespace and cannot be called`);
       }
 
       const method = context.path.at(-1)!;
-      const namespace = context.path.slice(0, -1).join(".");
-      const channel = context.path.join(".");
+      const namespace = context.path.slice(0, -1).join('.');
+      const channel = context.path.join('.');
 
       return context.invoke({
         path: [...context.path],
@@ -131,9 +131,9 @@ function createProxy(context: ProxyContext): unknown {
 }
 
 function isNamespaceNode(value: unknown): value is Record<PropertyKey, unknown> {
-  return value !== null && typeof value === "object";
+  return value !== null && typeof value === 'object';
 }
 
 function formatPath(path: string[]): string {
-  return path.length > 0 ? path.join(".") : "<root>";
+  return path.length > 0 ? path.join('.') : '<root>';
 }

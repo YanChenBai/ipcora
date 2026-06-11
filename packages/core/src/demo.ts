@@ -1,5 +1,5 @@
-import { createIpcError, createIpcora } from ".";
-import type { IpcRequest, IpcResponse, IpcTransport, StandardSchemaV1 } from ".";
+import { createIpcError, createIpcora } from '.';
+import type { IpcRequest, IpcResponse, IpcTransport, StandardSchemaV1 } from '.';
 
 type DemoHandler = (
   event: { sender: { id: number } },
@@ -12,7 +12,7 @@ type DemoPeerContext = {
 
 type DemoUser = {
   id: string;
-  role: "admin" | "member";
+  role: 'admin' | 'member';
 };
 
 type DemoMetadata = {
@@ -33,7 +33,7 @@ type ProjectOutput = {
   createdBy: string;
 };
 
-type DemoRequest<TParams = unknown> = Omit<IpcRequest, "params" | "metadata"> & {
+type DemoRequest<TParams = unknown> = Omit<IpcRequest, 'params' | 'metadata'> & {
   params?: TParams;
   metadata?: DemoMetadata;
 };
@@ -46,9 +46,9 @@ function schema<TOutput>(
     | { issues: readonly { message: string; path?: readonly unknown[] }[] },
 ): StandardSchemaV1<unknown, TOutput> {
   return {
-    "~standard": {
+    '~standard': {
       version: 1,
-      vendor: "demo",
+      vendor: 'demo',
       validate,
     },
   };
@@ -62,21 +62,21 @@ function createProjectRequest(request: DemoRequest<CreateProjectParams>): IpcReq
   return request;
 }
 
-function healthRequest(request: Omit<DemoRequest, "params">): IpcRequest {
+function healthRequest(request: Omit<DemoRequest, 'params'>): IpcRequest {
   return request;
 }
 
-const createProjectParams = schema<CreateProjectParams>((value) => {
-  if (!value || typeof value !== "object") {
-    return { issues: [{ message: "Expected an object" }] };
+const createProjectParams = schema<CreateProjectParams>(value => {
+  if (!value || typeof value !== 'object') {
+    return { issues: [{ message: 'Expected an object' }] };
   }
 
   const params = value as Record<string, unknown>;
-  if (typeof params.name !== "string" || params.name.length === 0) {
-    return { issues: [{ message: "Expected a project name", path: ["name"] }] };
+  if (typeof params.name !== 'string' || params.name.length === 0) {
+    return { issues: [{ message: 'Expected a project name', path: ['name'] }] };
   }
-  if (typeof params.private !== "boolean") {
-    return { issues: [{ message: "Expected a privacy flag", path: ["private"] }] };
+  if (typeof params.private !== 'boolean') {
+    return { issues: [{ message: 'Expected a privacy flag', path: ['private'] }] };
   }
 
   return {
@@ -87,14 +87,14 @@ const createProjectParams = schema<CreateProjectParams>((value) => {
   };
 });
 
-const projectOutput = schema<ProjectOutput>((value) => {
-  if (!value || typeof value !== "object") {
-    return { issues: [{ message: "Expected an object response" }] };
+const projectOutput = schema<ProjectOutput>(value => {
+  if (!value || typeof value !== 'object') {
+    return { issues: [{ message: 'Expected an object response' }] };
   }
 
   const output = value as Record<string, unknown>;
-  const keys = ["id", "name", "ownerTenant", "traceId", "createdBy"];
-  const invalidKey = keys.find((key) => typeof output[key] !== "string");
+  const keys = ['id', 'name', 'ownerTenant', 'traceId', 'createdBy'];
+  const invalidKey = keys.find(key => typeof output[key] !== 'string');
   if (invalidKey) {
     return { issues: [{ message: `Expected ${invalidKey} to be a string`, path: [invalidKey] }] };
   }
@@ -145,12 +145,12 @@ export function createDemoIpcora() {
     projectCount: 0,
   };
   const ipcora = createIpcora<DemoPeerContext>({
-    channel: "demo:ipcora",
+    channel: 'demo:ipcora',
     transport: memory.transport,
   })
     .state(state)
     .decorate({
-      serviceName: "project-service",
+      serviceName: 'project-service',
     })
     .derive(({ rawParams }) => {
       return { rawParamsKind: typeof rawParams };
@@ -159,22 +159,22 @@ export function createDemoIpcora() {
       return { receivedAt: Date.now() };
     })
     .use<{ traceId: string }>(({ metadata }, next) => {
-      return next({ traceId: String(metadata.traceId ?? "trace-demo") });
+      return next({ traceId: String(metadata.traceId ?? 'trace-demo') });
     })
-    .macro("requireRole", {
+    .macro('requireRole', {
       onGuard({ metadata, option, error }) {
         const user = readDemoUser(metadata);
         if (!user) {
-          throw error("UNAUTHORIZED", { message: "Missing user metadata" });
+          throw error('UNAUTHORIZED', { message: 'Missing user metadata' });
         }
         if (user.role !== option) {
-          throw error("FORBIDDEN", { message: `Expected ${option} role` });
+          throw error('FORBIDDEN', { message: `Expected ${option} role` });
         }
         return { user };
       },
     })
     .handler(
-      "project.create",
+      'project.create',
       ({ store, tenant, traceId, user, params }) => {
         store.projectCount += 1;
 
@@ -189,16 +189,16 @@ export function createDemoIpcora() {
       {
         params: createProjectParams,
         output: projectOutput,
-        requireRole: "admin",
+        requireRole: 'admin',
         onAfterHandle({ rawParamsKind, output }) {
-          if (rawParamsKind !== "object") {
-            throw createIpcError("INVALID_INPUT_KIND");
+          if (rawParamsKind !== 'object') {
+            throw createIpcError('INVALID_INPUT_KIND');
           }
           return output;
         },
       },
     )
-    .handler("system.health", ({ serviceName, receivedAt }) => {
+    .handler('system.health', ({ serviceName, receivedAt }) => {
       return {
         ok: true,
         service: serviceName,
@@ -213,7 +213,7 @@ export function createDemoIpcora() {
     },
     {
       context: {
-        tenant: "acme",
+        tenant: 'acme',
       },
     },
   );
@@ -232,17 +232,17 @@ export async function runDemo() {
     demo.channel,
     1,
     createProjectRequest({
-      id: "request-1",
-      path: "project.create",
+      id: 'request-1',
+      path: 'project.create',
       params: {
-        name: "Launch Plan",
+        name: 'Launch Plan',
         private: true,
       },
       metadata: {
-        traceId: "trace-001",
+        traceId: 'trace-001',
         user: {
-          id: "user-1",
-          role: "admin",
+          id: 'user-1',
+          role: 'admin',
         },
       },
     }),
@@ -252,16 +252,16 @@ export async function runDemo() {
     demo.channel,
     1,
     createProjectRequest({
-      id: "request-2",
-      path: "project.create",
+      id: 'request-2',
+      path: 'project.create',
       params: {
-        name: "Budget",
+        name: 'Budget',
         private: false,
       },
       metadata: {
         user: {
-          id: "user-2",
-          role: "member",
+          id: 'user-2',
+          role: 'member',
         },
       },
     }),
@@ -271,8 +271,8 @@ export async function runDemo() {
     demo.channel,
     1,
     healthRequest({
-      id: "request-3",
-      path: "system.health",
+      id: 'request-3',
+      path: 'system.health',
     }),
   );
 

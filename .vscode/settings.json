@@ -1,12 +1,6 @@
 {
   "editor.formatOnSave": true,
-  "cSpell.words": [
-    "arktype",
-    "bumpp",
-    "Ipcora",
-    "nanoevents",
-    "typebox"
-  ],
+  "cSpell.words": ["arktype", "bumpp", "Ipcora", "nanoevents", "typebox"],
   "editor.defaultFormatter": "oxc.oxc-vscode",
   "oxc.fmt.configPath": "./vite.config.ts",
   "editor.formatOnSaveMode": "file",

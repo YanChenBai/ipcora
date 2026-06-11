@@ -1,4 +1,4 @@
-import type { createIpcError } from "./errors";
+import type { createIpcError } from './errors';
 
 export type AnyRecord = Record<string, unknown>;
 export type Expand<T> = { [K in keyof T]: T[K] } & {};
@@ -12,18 +12,18 @@ export type MaybePromise<T> = T | Promise<T>;
  * Named execution phases used when reporting errors to `onError` hooks.
  */
 export type LifecyclePhase =
-  | "onRequest"
-  | "onTransform"
-  | "derive"
-  | "validation"
-  | "resolve"
-  | "onGuard"
-  | "onBeforeHandle"
-  | "handler"
-  | "onAfterHandle"
-  | "onMapResponse"
-  | "onError"
-  | "onAfterResponse";
+  | 'onRequest'
+  | 'onTransform'
+  | 'derive'
+  | 'validation'
+  | 'resolve'
+  | 'onGuard'
+  | 'onBeforeHandle'
+  | 'handler'
+  | 'onAfterHandle'
+  | 'onMapResponse'
+  | 'onError'
+  | 'onAfterResponse';
 
 /**
  * Wire request sent from a renderer-side client to the main process.
@@ -56,7 +56,7 @@ export type IpcResponse<T = unknown> =
  * and TypeBox adapters can be consumed through this shared contract.
  */
 export interface StandardSchemaV1<TParams = unknown, TOutput = TParams> {
-  readonly "~standard": {
+  readonly '~standard': {
     readonly version: 1;
     readonly vendor: string;
     readonly validate: (

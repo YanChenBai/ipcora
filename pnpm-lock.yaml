@@ -6,13 +6,34 @@ settings:
 
 catalogs:
   default:
+    '@standard-schema/spec':
+      specifier: ^1.1.0
+      version: 1.1.0
+    '@typescript/native-preview':
+      specifier: 7.0.0-dev.20260509.2
+      version: 7.0.0-dev.20260509.2
+    arktype:
+      specifier: ^2.2.0
+      version: 2.2.0
+    bumpp:
+      specifier: ^11.1.0
+      version: 11.1.0
+    electron:
+      specifier: ^41.7.2
+      version: 41.7.2
+    pika-events:
+      specifier: ^0.0.1
+      version: 0.0.1
+    typescript:
+      specifier: ^6.0.3
+      version: 6.0.3
     vite-plus:
       specifier: ^0.1.24
       version: 0.1.24
 
 overrides:
   vite: npm:@voidzero-dev/vite-plus-core@latest
-  vitest: npm:@voidzero-dev/vite-plus-test@latest
+  vitest: npm:@voidzero-dev/vite-plus-test@^0.1.24
 
 importers:
 
@@ -32,50 +53,50 @@ importers:
         version: link:../core
     devDependencies:
       '@types/node':
-        specifier: ^25.6.2
+        specifier: ^25.9.2
         version: 25.9.2
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260509.2
+        specifier: 'catalog:'
         version: 7.0.0-dev.20260509.2
       bumpp:
-        specifier: ^11.1.0
+        specifier: 'catalog:'
         version: 11.1.0
       typescript:
-        specifier: ^6.0.3
+        specifier: 'catalog:'
         version: 6.0.3
       vite-plus:
         specifier: 'catalog:'
         version: 0.1.24(@types/node@25.9.2)(@vitest/ui@4.1.8)(esbuild@0.27.7)(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3)(vite@7.3.1(@types/node@25.9.2)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))(yaml@2.9.0)
       vitest:
-        specifier: npm:@voidzero-dev/vite-plus-test@latest
+        specifier: npm:@voidzero-dev/vite-plus-test@^0.1.24
         version: '@voidzero-dev/vite-plus-test@0.1.24(@types/node@25.9.2)(@vitest/ui@4.1.8)(esbuild@0.27.7)(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3)(vite@7.3.1(@types/node@25.9.2)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))(yaml@2.9.0)'
 
   packages/core:
     dependencies:
       '@standard-schema/spec':
-        specifier: ^1.1.0
+        specifier: 'catalog:'
         version: 1.1.0
       arktype:
-        specifier: ^2.2.0
+        specifier: 'catalog:'
         version: 2.2.0
       pika-events:
-        specifier: ^0.0.1
+        specifier: 'catalog:'
         version: 0.0.1
     devDependencies:
       '@types/node':
-        specifier: ^24.12.0
+        specifier: ^24.13.1
         version: 24.13.1
       bumpp:
-        specifier: ^11.0.1
+        specifier: 'catalog:'
         version: 11.1.0
       typescript:
-        specifier: ^6.0.2
+        specifier: 'catalog:'
         version: 6.0.3
       vite-plus:
         specifier: 'catalog:'
         version: 0.1.24(@types/node@24.13.1)(@vitest/ui@4.1.8)(esbuild@0.27.7)(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))(yaml@2.9.0)
       vitest:
-        specifier: npm:@voidzero-dev/vite-plus-test@latest
+        specifier: npm:@voidzero-dev/vite-plus-test@^0.1.24
         version: '@voidzero-dev/vite-plus-test@0.1.24(@types/node@24.13.1)(@vitest/ui@4.1.8)(esbuild@0.27.7)(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))(yaml@2.9.0)'
 
   packages/electron:
@@ -85,22 +106,22 @@ importers:
         version: link:../core
     devDependencies:
       '@types/node':
-        specifier: ^24.12.0
+        specifier: ^24.13.1
         version: 24.13.1
       bumpp:
-        specifier: ^11.0.1
+        specifier: 'catalog:'
         version: 11.1.0
       electron:
-        specifier: ^41.1.0
+        specifier: 'catalog:'
         version: 41.7.2
       typescript:
-        specifier: ^6.0.2
+        specifier: 'catalog:'
         version: 6.0.3
       vite-plus:
         specifier: 'catalog:'
         version: 0.1.24(@types/node@24.13.1)(@vitest/ui@4.1.8)(esbuild@0.27.7)(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))(yaml@2.9.0)
       vitest:
-        specifier: npm:@voidzero-dev/vite-plus-test@latest
+        specifier: npm:@voidzero-dev/vite-plus-test@^0.1.24
         version: '@voidzero-dev/vite-plus-test@0.1.24(@types/node@24.13.1)(@vitest/ui@4.1.8)(esbuild@0.27.7)(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3)(vite@7.3.1(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))(yaml@2.9.0)'
 
 packages:
@@ -141,8 +162,8 @@ packages:
       '@csstools/css-parser-algorithms': ^4.0.0
       '@csstools/css-tokenizer': ^4.0.0
 
-  '@csstools/css-color-parser@4.1.1':
-    resolution: {integrity: sha512-eZ5XOtyhK+mggRafYUWzA0tvaYOFgdY8AkgQiCJF9qNAePnUo/zmsqqYubBBb3sQ8uNUaSKTY9s9klfRaAXL0g==}
+  '@csstools/css-color-parser@4.1.2':
+    resolution: {integrity: sha512-n6Zd8mpVhObnaOqq6TC/lBCKgYncAGfFwuvJGQZTDRAwEoxwXIZu9kXBQeXkcqHsE6Sp6LyxDMrvXj5gOxnryw==}
     engines: {node: '>=20.19.0'}
     peerDependencies:
       '@csstools/css-parser-algorithms': ^4.0.0
@@ -1568,7 +1589,7 @@ snapshots:
     dependencies:
       '@asamuzakjp/generational-cache': 1.0.1
       '@csstools/css-calc': 3.2.1(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)
-      '@csstools/css-color-parser': 4.1.1(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)
+      '@csstools/css-color-parser': 4.1.2(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)
       '@csstools/css-parser-algorithms': 4.0.0(@csstools/css-tokenizer@4.0.0)
       '@csstools/css-tokenizer': 4.0.0
     optional: true
@@ -1602,7 +1623,7 @@ snapshots:
       '@csstools/css-tokenizer': 4.0.0
     optional: true
 
-  '@csstools/css-color-parser@4.1.1(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)':
+  '@csstools/css-color-parser@4.1.2(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)':
     dependencies:
       '@csstools/color-helpers': 6.0.2
       '@csstools/css-calc': 3.2.1(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)

@@ -1,16 +1,16 @@
-import { defineConfig } from "vite-plus";
+import { defineConfig } from 'vite-plus';
 
 export default defineConfig({
   pack: [
     {
       entry: {
-        index: "./src/index.ts",
+        index: './src/index.ts',
       },
-      platform: "node",
-      format: "esm",
+      platform: 'node',
+      format: 'esm',
       dts: true,
       exports: {
-        devExports: "dev",
+        devExports: 'dev',
       },
     },
   ],
@@ -18,7 +18,7 @@ export default defineConfig({
     typecheck: {
       enabled: true,
     },
-    include: ["./tests/**/*.test.ts"],
+    include: ['./tests/**/*.test.ts'],
   },
   lint: {
     options: {

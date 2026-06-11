@@ -1,4 +1,4 @@
-import { createIpcError, IpcError } from "./errors";
+import { createIpcError, IpcError } from './errors';
 import type {
   AnyMacroDefinition,
   AnyRecord,
@@ -37,7 +37,7 @@ import type {
   OnTransformHook,
   ResolveHook,
   RuntimeContext,
-} from "./types";
+} from './types';
 import {
   builtInHandlerOptionKeys,
   cloneHooks,
@@ -45,7 +45,7 @@ import {
   joinPath,
   normalizeObjectParams,
   parseSchema,
-} from "./utils";
+} from './utils';
 
 /**
  * IPC router. It owns route registration, lifecycle execution, transport
@@ -60,9 +60,9 @@ export class Ipcora<
 
   private readonly routes: Map<string, HandlerDefinition<any, any>>;
   private readonly bindings: Map<number, Binding<any>>;
-  private readonly options: Required<Pick<IpcoraOptions, "exposeStack">> & IpcoraOptions;
+  private readonly options: Required<Pick<IpcoraOptions, 'exposeStack'>> & IpcoraOptions;
   private readonly macros: Map<string, AnyMacroDefinition>;
-  private prefix = "";
+  private prefix = '';
   private hooks: HookStore<any, any>;
   private middleware: IpcMiddleware<any, any>[] = [];
   private decorators: AnyRecord = {};
@@ -70,7 +70,7 @@ export class Ipcora<
   private installed = false;
 
   constructor(options: IpcoraOptions = {}) {
-    this.channel = options.channel ?? "ipcora:invoke";
+    this.channel = options.channel ?? 'ipcora:invoke';
     this.options = { exposeStack: false, ...options };
     this.routes = new Map();
     this.bindings = new Map();
@@ -434,7 +434,7 @@ export class Ipcora<
     const { transport } = this.options;
     if (!transport) {
       throw new Error(
-        "IPC transport is required. Pass a transport to createIpcora({ transport }).",
+        'IPC transport is required. Pass a transport to createIpcora({ transport }).',
       );
     }
     if (transport.listenerCount(this.channel) > 0) {
@@ -447,13 +447,13 @@ export class Ipcora<
   private async dispatch(event: IpcEvent, request: IpcRequest): Promise<IpcResponse> {
     const binding = this.bindings.get(event.sender.id);
     if (!binding) {
-      return this.errorResponse(request?.id ?? "", createIpcError("PEER_NOT_BOUND"));
+      return this.errorResponse(request?.id ?? '', createIpcError('PEER_NOT_BOUND'));
     }
     const definition = this.routes.get(request.path);
     if (!definition) {
       return this.errorResponse(
         request.id,
-        createIpcError("HANDLER_NOT_FOUND", {
+        createIpcError('HANDLER_NOT_FOUND', {
           message: `IPC handler not found: ${request.path}`,
         }),
       );
@@ -461,7 +461,7 @@ export class Ipcora<
 
     const startedAt = performance.now();
     const metadata = Object.freeze({ ...request.metadata });
-    let phase: LifecyclePhase = "onRequest";
+    let phase: LifecyclePhase = 'onRequest';
     let params: unknown = request.params;
     let output: unknown;
     let response: IpcResponse | undefined;
@@ -493,52 +493,52 @@ export class Ipcora<
 
       // Transform and derive run before validation so they can normalize raw params
       // and add request-derived context before schemas are evaluated.
-      phase = "onTransform";
+      phase = 'onTransform';
       for (const hook of definition.hooks.onTransform) {
         const next = await hook({ ...base(), params });
         if (next !== undefined) params = next;
       }
 
-      phase = "derive";
+      phase = 'derive';
       for (const hook of definition.hooks.derive) {
         const extension = await hook({ ...base(), params, rawParams: request.params });
         if (extension) context = { ...context, ...extension };
       }
 
-      phase = "validation";
+      phase = 'validation';
       params = await parseSchema(definition.paramsSchema, params);
 
-      phase = "resolve";
+      phase = 'resolve';
       for (const hook of definition.hooks.resolve) {
         const extension = await hook({ ...base(), params, rawParams: request.params });
         if (extension) context = { ...context, ...extension };
       }
 
-      phase = "onGuard";
+      phase = 'onGuard';
       for (const hook of definition.hooks.onGuard) {
         const extension = await hook({ ...base(), params });
         if (extension) context = { ...context, ...extension };
       }
 
-      phase = "onBeforeHandle";
+      phase = 'onBeforeHandle';
       for (const hook of definition.hooks.onBeforeHandle) {
         await hook({ ...base(), params });
       }
 
-      phase = "handler";
+      phase = 'handler';
       output = await this.executeMiddleware(definition, params, context, base);
 
-      phase = "onAfterHandle";
+      phase = 'onAfterHandle';
       for (const hook of [...definition.hooks.onAfterHandle].reverse()) {
         const next = await hook({ ...base(), params, output });
         if (next !== undefined) output = next;
       }
 
-      phase = "validation";
+      phase = 'validation';
       output = await parseSchema(definition.outputSchema, output);
       response = { id: request.id, ok: true, data: output };
 
-      phase = "onMapResponse";
+      phase = 'onMapResponse';
       for (const hook of [...definition.hooks.onMapResponse].reverse()) {
         const next = await hook({ ...base(), params, output, response });
         if (next !== undefined) response = next;
@@ -546,7 +546,7 @@ export class Ipcora<
     } catch (error) {
       caught = error;
       const failedPhase = phase;
-      phase = "onError";
+      phase = 'onError';
       for (const hook of [...definition.hooks.onError].reverse()) {
         const handled = await hook({
           ...base(),
@@ -564,7 +564,7 @@ export class Ipcora<
     }
 
     const duration = performance.now() - startedAt;
-    phase = "onAfterResponse";
+    phase = 'onAfterResponse';
     for (const hook of [...definition.hooks.onAfterResponse].reverse()) {
       try {
         await hook({
@@ -624,8 +624,8 @@ export class Ipcora<
       id,
       ok: false,
       error: {
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Internal IPC error",
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Internal IPC error',
         ...(this.options.exposeStack ? { stack: normalized.stack } : {}),
       },
     };
