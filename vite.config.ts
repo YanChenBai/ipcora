@@ -1,57 +1,50 @@
-import { defineConfig } from 'vite-plus';
+import { defineConfig } from "vite-plus";
 
 export default defineConfig({
+  run: {
+    tasks: {
+      build: "vp run -r build",
+      test: "vp test",
+      typecheck: "vp check --no-fmt --no-lint ",
+    },
+  },
   pack: [
     {
       entry: {
-        renderer: './src/renderer.ts',
-        preload: './src/preload.ts',
-        index: './src/index.ts',
+        index: "./src/index.ts",
       },
-      platform: 'browser',
-      format: 'esm',
+      platform: "node",
+      format: "esm",
       dts: true,
-      deps: {
-        neverBundle: ['electron'],
-      },
       exports: {
-        devExports: 'dev',
+        devExports: "dev",
       },
-    },
-    {
-      entry: {
-        main: './src/main/index.ts',
-        typebox: './src/typebox.ts',
-      },
-      platform: 'node',
-      format: 'esm',
-      dts: true,
-      deps: {
-        neverBundle: ['electron'],
-      },
-      exports: {},
     },
   ],
   test: {
-    environment: 'jsdom',
-    ui: true,
     typecheck: {
       enabled: true,
     },
-    include: ['./tests/**/*.test.ts'],
+    projects: [
+      "./packages/core/vite.config.ts",
+      "./packages/electron/vite.config.ts",
+      "./packages/client/vite.config.ts",
+    ],
   },
   fmt: {
-    ignorePatterns: [],
-    singleQuote: true,
-    experimentalSortImports: {},
+    sortImports: true,
+    sortTailwindcss: true,
+    sortPackageJson: true,
+    arrowParens: "avoid",
+    embeddedLanguageFormatting: "auto",
   },
   lint: {
     plugins: [],
     categories: {},
     rules: {},
     settings: {
-      'jsx-a11y': {
-        polymorphicPropName: 'as',
+      "jsx-a11y": {
+        polymorphicPropName: "as",
         components: {},
         attributes: {},
       },
@@ -79,9 +72,10 @@ export default defineConfig({
     ignorePatterns: [],
     options: {
       typeAware: true,
+      typeCheck: true,
     },
   },
   staged: {
-    '*': 'vp check --fix',
+    "*": "vp check --fix",
   },
 });

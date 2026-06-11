@@ -15,5 +15,7 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
-  }
+    "customConditions": ["dev"]
+  },
+  "include": ["src", "tests"]
 }

@@ -1,0 +1,56 @@
+{
+  "name": "@ipcora/electron",
+  "version": "0.3.0",
+  "description": "Electron transport adapter for ipcora.",
+  "homepage": "https://github.com/YanChenBai/ipcora#readme",
+  "bugs": {
+    "url": "https://github.com/YanChenBai/ipcora/issues"
+  },
+  "license": "MIT",
+  "author": "YanChenBai <author.name@mail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YanChenBai/ipcora.git",
+    "directory": "packages/electron"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "dev": "./src/index.ts",
+      "default": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.mjs",
+      "./package.json": "./package.json"
+    },
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "typecheck": "tsc --noEmit",
+    "dev": "vp pack --watch",
+    "test": "vp run @ipcora/core#build && vp test",
+    "check": "vp check",
+    "prepublishOnly": "vp run build"
+  },
+  "dependencies": {
+    "@ipcora/core": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.0",
+    "bumpp": "^11.0.1",
+    "electron": "^41.1.0",
+    "typescript": "^6.0.2",
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "electron": ">=40.0.0"
+  }
+}
