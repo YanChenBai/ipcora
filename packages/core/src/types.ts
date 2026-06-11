@@ -1,7 +1,51 @@
-import type { createIpcError } from './errors';
+import type { fail, IpcError } from './errors';
 
 export type AnyRecord = Record<string, unknown>;
 export type Expand<T> = { [K in keyof T]: T[K] } & {};
+type UnionToIntersection<T> = (T extends unknown ? (value: T) => void : never) extends (
+  value: infer TResult,
+) => void
+  ? TResult
+  : never;
+
+/**
+ * Deep-merge two object types. When both sides have plain-object values at
+ * the same key, the merge recurses; otherwise `TRight` wins (preserving the
+ * original flat-replace semantics for primitives, functions, arrays, etc.).
+ */
+export type Merge<TLeft, TRight> = Expand<
+  Omit<TLeft, keyof TRight> & {
+    [K in keyof TRight]: K extends keyof TLeft
+      ? IsPlainObj<TLeft[K]> extends true
+        ? IsPlainObj<TRight[K]> extends true
+          ? Merge<TLeft[K], TRight[K]>
+          : TRight[K]
+        : TRight[K]
+      : TRight[K];
+  }
+>;
+
+/** Distributes over unions and returns `true` when `T` is a plain record. */
+type IsPlainObj<T> = [T] extends [never]
+  ? false
+  : T extends (...args: any[]) => any
+    ? false
+    : T extends readonly any[]
+      ? false
+      : T extends object
+        ? true
+        : false;
+export type PathToObject<
+  TPath extends string,
+  TValue,
+> = TPath extends `${infer THead}.${infer TTail}`
+  ? { [K in THead]: PathToObject<TTail, TValue> }
+  : { [K in TPath]: TValue };
+export type JoinPathType<TPrefix extends string, TPath extends string> = TPrefix extends ''
+  ? TPath
+  : TPath extends ''
+    ? TPrefix
+    : `${TPrefix}.${TPath}`;
 
 /**
  * A value that can be returned immediately or resolved later.
@@ -39,17 +83,59 @@ export interface IpcRequest {
  * Wire response returned by the main process dispatcher.
  */
 export type IpcResponse<T = unknown> =
-  | { id: string; ok: true; data: T }
-  | {
-      id: string;
-      ok: false;
-      error: {
-        code: string;
-        message: string;
-        data?: unknown;
-        stack?: string;
-      };
-    };
+  | { data: T; error?: undefined }
+  | { data?: undefined; error: IpcErrorPayload };
+
+export type IpcErrorPayload<
+  TName extends string = string,
+  TData = unknown,
+  TStatus extends number = number,
+> = {
+  name: TName;
+  message: string;
+  data?: TData;
+  status?: TStatus;
+  stack?: string;
+};
+
+export type BuiltInErrorPayload =
+  | IpcErrorPayload<'PEER_NOT_BOUND'>
+  | IpcErrorPayload<'HANDLER_NOT_FOUND'>
+  | IpcErrorPayload<'VALIDATION_ERROR'>
+  | IpcErrorPayload<'INTERNAL_SERVER_ERROR'>;
+
+export type IpcResult<TData, TError = IpcErrorPayload> =
+  | { data: Awaited<TData>; error: null }
+  | { data: null; error: TError };
+
+export type AnyErrorConstructor = abstract new (...args: any[]) => Error;
+export type ErrorRegistry = Record<string, AnyErrorConstructor>;
+export type ErrorMapper<
+  TError extends Error = Error,
+  TMapped extends IpcError = IpcError,
+> = (value: { fail: typeof fail; error: TError }) => TMapped;
+export type ErrorMapPayload<TError extends AnyErrorConstructor, TMapped> =
+  TMapped extends IpcError<infer TName, infer TData, infer TStatus>
+    ? IpcErrorPayload<TName, TData, TStatus>
+    : TMapped extends IpcErrorPayload<infer TName, infer TData, infer TStatus>
+      ? IpcErrorPayload<TName, TData, TStatus>
+      : IpcErrorPayload<InstanceType<TError>['name'], undefined>;
+export type ErrorRegistryPayload<TRegistry extends ErrorRegistry> = {
+  [K in keyof TRegistry]: IpcErrorPayload<K & string, undefined>;
+}[keyof TRegistry];
+export type ErrorReturnPayload<TReturn> =
+  Exclude<Awaited<TReturn>, void | undefined> extends infer TValue
+    ? TValue extends IpcError<infer TName, infer TData, infer TStatus>
+      ? IpcErrorPayload<TName, TData, TStatus>
+      : TValue extends IpcResponse
+        ? TValue extends { error: infer TError }
+          ? TError
+          : never
+        : never
+    : never;
+export type OnErrorHookPayload<THook> = THook extends (...args: any[]) => infer TReturn
+  ? ErrorReturnPayload<TReturn>
+  : never;
 
 /**
  * Minimal Standard Schema v1 shape. Libraries such as ArkType, Zod, Valibot,
@@ -86,23 +172,23 @@ export type HookReturnExtension<TReturn> = [TReturn] extends [never]
     : {};
 
 /**
- * Minimal sender shape used by transport plugins.
+ * Minimal sender shape used by adapters.
  */
 export interface IpcSender {
   id: number;
 }
 
 /**
- * Minimal event shape passed from a transport plugin to the router.
+ * Minimal event shape passed from an adapter to the router.
  */
 export interface IpcEvent<TSender extends IpcSender = IpcSender> {
   sender: TSender;
 }
 
 /**
- * Transport plugin contract used to install and remove invoke handlers.
+ * Adapter object used to install and remove invoke handlers for a platform.
  */
-export interface IpcTransport<TEvent extends IpcEvent = IpcEvent> {
+export interface IpcAdapter<TEvent extends IpcEvent = IpcEvent> {
   handle(
     channel: string,
     handler: (event: TEvent, request: IpcRequest) => MaybePromise<IpcResponse>,
@@ -136,7 +222,7 @@ export type LifecycleBase<TContext extends object, TStore extends object> = Runt
   signal: AbortSignal;
   startedAt: number;
   metadata: Readonly<Record<string, unknown>>;
-  error: typeof createIpcError;
+  fail: typeof fail;
 };
 
 export type OnRequestHook<TContext extends object, TStore extends object> = (
@@ -180,9 +266,12 @@ export type OnErrorHook<TContext extends object, TStore extends object> = (
     params: unknown;
     rawParams: unknown;
     cause: unknown;
+    name: string;
+    error: IpcError;
+    statusCode?: number;
     phase: LifecyclePhase;
   },
-) => MaybePromise<IpcResponse | void>;
+) => MaybePromise<IpcResponse | IpcError | void>;
 
 export type OnAfterResponseHook<TContext extends object, TStore extends object> = (
   value: LifecycleBase<TContext, TStore> & {
@@ -208,7 +297,11 @@ export type HandlerContext<TParams, TContext extends object, TStore extends obje
 
 export type HandlerFunction<TParams, TOutput, TContext extends object, TStore extends object> = (
   value: HandlerContext<TParams, TContext, TStore>,
-) => MaybePromise<TOutput>;
+) => TOutput | Promise<TOutput>;
+
+export type RouteHandler<TParams, TOutput, TError = never> = TParams extends void
+  ? () => Promise<IpcResult<Awaited<TOutput>, BuiltInErrorPayload | TError>>
+  : (params: TParams) => Promise<IpcResult<Awaited<TOutput>, BuiltInErrorPayload | TError>>;
 
 /**
  * Middleware wraps handler execution and can extend the runtime context by
@@ -242,6 +335,9 @@ export interface MacroDefinition<
   TOption,
   TExtension extends object = {},
 > {
+  seed?: unknown;
+  params?: AnySchema;
+  output?: AnySchema;
   onRequest?: MacroHook<OnRequestHook<TContext, TStore>, TOption>;
   onTransform?: MacroHook<OnTransformHook<TContext, TStore>, TOption>;
   derive?: MacroHook<DeriveHook<TContext, TStore>, TOption>;
@@ -319,23 +415,34 @@ export type NormalizeMacroOption<TOption> = [TOption] extends [never] ? unknown 
 export type MacroObjectRegistry<
   TContext extends object,
   TStore extends object,
-  TDefinitions extends Record<string, AnyMacroFactory>,
+  TDefinitions extends Record<string, AnyMacroEntry>,
 > = {
-  [K in keyof TDefinitions]: MacroFactory<
-    TContext,
-    TStore,
-    MacroOption<TDefinitions[K]>,
-    Exclude<Awaited<ReturnType<TDefinitions[K]>>, void | undefined> extends infer TDefinition
-      ? TDefinition extends MacroDefinition<TContext, TStore, MacroOption<TDefinitions[K]>, any>
-        ? TDefinition
-        : void
-      : void
-  >;
+  [K in keyof TDefinitions]: TDefinitions[K] extends AnyMacroFactory
+    ? MacroFactory<
+        TContext,
+        TStore,
+        MacroOption<TDefinitions[K]>,
+        Exclude<Awaited<ReturnType<TDefinitions[K]>>, void | undefined> extends infer TDefinition
+          ? TDefinition extends MacroDefinition<TContext, TStore, MacroOption<TDefinitions[K]>, any>
+            ? TDefinition
+            : void
+          : void
+      >
+    : TDefinitions[K] extends MacroDefinition<TContext, TStore, any, any>
+      ? MacroDefinition<
+          TContext,
+          TStore,
+          NormalizeMacroOption<MacroDefinitionOption<TDefinitions[K]>>,
+          MacroDefinitionExtension<TDefinitions[K]>
+        >
+      : never;
 };
-export type MacroObjectExtension<TDefinitions extends Record<string, AnyMacroFactory>> = Expand<
-  {
-    [K in keyof TDefinitions]: MacroDefinitionExtension<TDefinitions[K]>;
-  }[keyof TDefinitions]
+export type MacroObjectExtension<TDefinitions extends Record<string, AnyMacroEntry>> = Expand<
+  UnionToIntersection<
+    {
+      [K in keyof TDefinitions]: MacroDefinitionExtension<TDefinitions[K]>;
+    }[keyof TDefinitions]
+  >
 >;
 
 /**
@@ -386,8 +493,20 @@ export interface Binding<TContext extends object> {
 }
 
 export interface IpcoraOptions {
+  /**
+   * Unique name for this router. When set, prevents another router with the
+   * same name from installing an adapter (deduplication guard).
+   */
+  name?: string;
+  /**
+   * When `true`, handler registrations only contribute to the type-level
+   * `definition` — no routes are actually registered and no adapter is
+   * installed. Useful for composing type-only routers that share schemas
+   * without wiring up runtime handlers.
+   */
+  abstract?: boolean;
   channel?: string;
-  transport?: IpcTransport;
+  adapter?: IpcAdapter;
   exposeStack?: boolean;
   onAfterResponseError?: (error: unknown, path: string) => void;
 }

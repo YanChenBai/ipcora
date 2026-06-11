@@ -2,9 +2,9 @@ import { describe, expect, test, vi } from 'vitest';
 
 import {
   bindBrowserWindow,
+  createElectronAdapter,
   createBrowserWindowPeer,
   createElectronIpcora,
-  createElectronTransport,
 } from '../src';
 
 function createIpcMain() {
@@ -31,23 +31,21 @@ function createWindow(id = 1) {
 }
 
 describe('@ipcora/electron', () => {
-  test('adapts ipcMain to an ipcora transport', async () => {
+  test('adapts ipcMain to an ipcora adapter', async () => {
     const { handlers, ipcMain } = createIpcMain();
-    const transport = createElectronTransport(ipcMain as never);
+    const adapter = createElectronAdapter(ipcMain as never);
 
-    transport.handle('test', (_event, request) => ({ id: request.id, ok: true, data: 'ok' }));
+    adapter.handle('test', () => ({ data: 'ok' }));
 
     await expect(
       Promise.resolve(handlers.get('test')?.({ sender: { id: 1 } }, { id: '1' })),
     ).resolves.toEqual({
-      id: '1',
-      ok: true,
       data: 'ok',
     });
-    expect(transport.listenerCount('test')).toBe(1);
+    expect(adapter.listenerCount('test')).toBe(1);
 
-    transport.removeHandler('test');
-    expect(transport.listenerCount('test')).toBe(0);
+    adapter.removeHandler('test');
+    expect(adapter.listenerCount('test')).toBe(0);
   });
 
   test('creates peers from BrowserWindow-like objects', () => {
@@ -74,8 +72,6 @@ describe('@ipcora/electron', () => {
     await expect(
       handlers.get('test:electron')?.({ sender: { id: 1 } }, { id: '1', path: 'ping' }),
     ).resolves.toEqual({
-      id: '1',
-      ok: true,
       data: 'acme',
     });
   });

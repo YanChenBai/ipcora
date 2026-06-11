@@ -2,10 +2,10 @@ import { createIpcora } from '@ipcora/core';
 import type {
   IpcEvent,
   Ipcora,
+  IpcAdapter,
   IpcoraOptions,
   IpcPeer,
   IpcRequest,
-  IpcTransport,
 } from '@ipcora/core';
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent, WebContents } from 'electron';
 
@@ -13,9 +13,9 @@ export type ElectronIpcEvent = IpcMainInvokeEvent & IpcEvent<WebContents>;
 
 export type ElectronIpcMain = Pick<IpcMain, 'handle' | 'listenerCount' | 'removeHandler'>;
 
-export type ElectronIpcTransport = IpcTransport<ElectronIpcEvent>;
+export type ElectronIpcAdapter = IpcAdapter<ElectronIpcEvent>;
 
-export interface ElectronIpcoraOptions extends Omit<IpcoraOptions, 'transport'> {
+export interface ElectronIpcoraOptions extends Omit<IpcoraOptions, 'adapter'> {
   ipcMain: ElectronIpcMain;
 }
 
@@ -23,7 +23,7 @@ export type ElectronIpcPeer = IpcPeer<WebContents> & {
   window: BrowserWindow;
 };
 
-export function createElectronTransport(ipcMain: ElectronIpcMain): ElectronIpcTransport {
+export function createElectronAdapter(ipcMain: ElectronIpcMain): ElectronIpcAdapter {
   return {
     handle(channel, handler) {
       ipcMain.handle(channel, (event, request) =>
@@ -45,7 +45,7 @@ export function createElectronIpcora<TContext extends object = {}, TStore extend
   const { ipcMain, ...ipcoraOptions } = options;
   return createIpcora<TContext, TStore>({
     ...ipcoraOptions,
-    transport: createElectronTransport(ipcMain),
+    adapter: createElectronAdapter(ipcMain),
   });
 }
 

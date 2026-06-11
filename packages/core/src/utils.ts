@@ -1,4 +1,4 @@
-import { createIpcError } from './errors';
+import { fail } from './errors';
 import type { AnySchema, HookStore } from './types';
 
 export const builtInHandlerOptionKeys = new Set([
@@ -63,7 +63,7 @@ export async function parseSchema(schema: AnySchema | undefined, value: unknown)
   if (!schema) return value;
   const result = await schema['~standard'].validate(value);
   if ('issues' in result && result.issues) {
-    throw createIpcError('VALIDATION_ERROR', {
+    throw fail('VALIDATION_ERROR', {
       message: result.issues.map(issue => issue.message).join('; '),
       data: result.issues,
     });

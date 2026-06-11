@@ -1,5 +1,5 @@
-import { createIpcError, createIpcora } from '.';
-import type { IpcRequest, IpcResponse, IpcTransport, StandardSchemaV1 } from '.';
+import { createIpcora, fail } from '.';
+import type { IpcRequest, IpcResponse, IpcAdapter, StandardSchemaV1 } from '.';
 
 type DemoHandler = (
   event: { sender: { id: number } },
@@ -110,9 +110,9 @@ const projectOutput = schema<ProjectOutput>(value => {
   };
 });
 
-export function createMemoryTransport() {
+export function createMemoryAdapter() {
   const handlers = new Map<string, DemoHandler>();
-  const transport: IpcTransport = {
+  const adapter: IpcAdapter = {
     handle(channel, handler) {
       handlers.set(channel, handler);
     },
@@ -136,17 +136,17 @@ export function createMemoryTransport() {
     return handler({ sender: { id: senderId } }, request);
   };
 
-  return { invoke, transport };
+  return { invoke, adapter };
 }
 
 export function createDemoIpcora() {
-  const memory = createMemoryTransport();
+  const memory = createMemoryAdapter();
   const state: { projectCount: number } = {
     projectCount: 0,
   };
   const ipcora = createIpcora<DemoPeerContext>({
     channel: 'demo:ipcora',
-    transport: memory.transport,
+    adapter: memory.adapter,
   })
     .state(state)
     .decorate({
@@ -162,13 +162,13 @@ export function createDemoIpcora() {
       return next({ traceId: String(metadata.traceId ?? 'trace-demo') });
     })
     .macro('requireRole', {
-      onGuard({ metadata, option, error }) {
+      onGuard({ metadata, option, fail }) {
         const user = readDemoUser(metadata);
         if (!user) {
-          throw error('UNAUTHORIZED', { message: 'Missing user metadata' });
+          throw fail('UNAUTHORIZED', 'Missing user metadata');
         }
         if (user.role !== option) {
-          throw error('FORBIDDEN', { message: `Expected ${option} role` });
+          throw fail('FORBIDDEN', `Expected ${option} role`);
         }
         return { user };
       },
@@ -192,7 +192,7 @@ export function createDemoIpcora() {
         requireRole: 'admin',
         onAfterHandle({ rawParamsKind, output }) {
           if (rawParamsKind !== 'object') {
-            throw createIpcError('INVALID_INPUT_KIND');
+            throw fail('INVALID_INPUT_KIND');
           }
           return output;
         },
@@ -200,7 +200,6 @@ export function createDemoIpcora() {
     )
     .handler('system.health', ({ serviceName, receivedAt }) => {
       return {
-        ok: true,
         service: serviceName,
         receivedAt,
       };

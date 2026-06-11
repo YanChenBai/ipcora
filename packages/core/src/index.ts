@@ -1,4 +1,4 @@
-export { createIpcError, IpcError } from './errors';
+export { fail, IpcError } from './errors';
 export { createIpcora, Ipcora } from './router';
 
 export type {
@@ -15,11 +15,17 @@ export type {
   IpcPeer,
   IpcRequest,
   IpcResponse,
+  IpcResult,
+  IpcErrorPayload,
+  BuiltInErrorPayload,
+  ErrorMapper,
+  IpcAdapter,
   IpcSender,
-  IpcTransport,
+  JoinPathType,
   LifecycleBase,
   LifecyclePhase,
   MacroDefinition,
+  Merge,
   MaybePromise,
   OnAfterHandleHook,
   OnAfterResponseHook,
@@ -31,5 +37,7 @@ export type {
   OnTransformHook,
   ResolveHook,
   RuntimeContext,
+  PathToObject,
+  RouteHandler,
   StandardSchemaV1,
 } from './types';
