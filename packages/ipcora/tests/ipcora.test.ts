@@ -403,46 +403,7 @@ describe('Ipcora core', () => {
     });
   });
 
-  test('global metadata schema applies to handlers without local metadata', async () => {
-    const metaSchema = schema<{ traceId: string }>(value => {
-      const m = value as Record<string, unknown>;
-      return m && typeof m.traceId === 'string'
-        ? { value: { traceId: m.traceId } }
-        : { issues: [{ message: 'traceId must be a string' }] };
-    });
-
-    const ipc = createIpcora({
-      channel: 'test:global-meta',
-      adapter: ipcAdapter.adapter,
-    })
-      .metadata(metaSchema)
-      .handler('a', ({ metadata }) => ({ traceId: metadata.traceId }))
-      .handler('b', ({ metadata }) => ({ traceId: metadata.traceId }));
-
-    ipc.bind(createPeer(1), { context: {} });
-
-    // Both handlers validate metadata from the global schema.
-    await expect(
-      invoke('test:global-meta', 1, { id: '1', path: 'a', metadata: { traceId: 't1' } }),
-    ).resolves.toEqual({ data: { traceId: 't1' } });
-
-    await expect(
-      invoke('test:global-meta', 1, { id: '2', path: 'b', metadata: { traceId: 't2' } }),
-    ).resolves.toEqual({ data: { traceId: 't2' } });
-
-    // Both reject invalid metadata.
-    await expect(
-      invoke('test:global-meta', 1, { id: '3', path: 'a', metadata: {} }),
-    ).resolves.toMatchObject({ error: { name: 'VALIDATION_ERROR' } });
-  });
-
-  test('local metadata option overrides global metadata schema', async () => {
-    const globalSchema = schema<{ global: string }>(value => {
-      const m = value as Record<string, unknown>;
-      return m && typeof m.global === 'string'
-        ? { value: { global: m.global } }
-        : { issues: [{ message: 'global required' }] };
-    });
+  test('local metadata option validates metadata with schema', async () => {
     const localSchema = schema<{ local: number }>(value => {
       const m = value as Record<string, unknown>;
       return m && typeof m.local === 'number'
@@ -451,57 +412,23 @@ describe('Ipcora core', () => {
     });
 
     const ipc = createIpcora({
-      channel: 'test:meta-override',
+      channel: 'test:meta-local',
       adapter: ipcAdapter.adapter,
-    })
-      .metadata(globalSchema)
-      .handler('withLocal', ({ metadata }) => ({ local: (metadata as { local: number }).local }), {
-        metadata: localSchema, // overrides global
-      })
-      .handler('noLocal', ({ metadata }) => ({ global: (metadata as { global: string }).global }));
-    // noLocal uses global schema
-
-    ipc.bind(createPeer(1), { context: {} });
-
-    // withLocal: local schema validates { local: number }
-    await expect(
-      invoke('test:meta-override', 1, { id: '1', path: 'withLocal', metadata: { local: 42 } }),
-    ).resolves.toEqual({ data: { local: 42 } });
-
-    await expect(
-      invoke('test:meta-override', 1, { id: '2', path: 'withLocal', metadata: { global: 'x' } }),
-    ).resolves.toMatchObject({ error: { name: 'VALIDATION_ERROR' } });
-
-    // noLocal: global schema validates { global: string }
-    await expect(
-      invoke('test:meta-override', 1, { id: '3', path: 'noLocal', metadata: { global: 'g' } }),
-    ).resolves.toEqual({ data: { global: 'g' } });
-  });
-
-  test('global metadata flows through group scopes', async () => {
-    const metaSchema = schema<{ version: number }>(value => {
-      const m = value as Record<string, unknown>;
-      return m && typeof m.version === 'number'
-        ? { value: { version: m.version } }
-        : { issues: [{ message: 'version must be number' }] };
+    }).handler('withLocal', ({ metadata }) => ({ local: (metadata as { local: number }).local }), {
+      metadata: localSchema,
     });
 
-    const ipc = createIpcora({
-      channel: 'test:meta-group',
-      adapter: ipcAdapter.adapter,
-    })
-      .metadata(metaSchema)
-      .group('api', g => g.handler('status', ({ metadata }) => ({ v: metadata.version })));
-
     ipc.bind(createPeer(1), { context: {} });
 
+    // Valid metadata passes local schema validation.
     await expect(
-      invoke('test:meta-group', 1, {
-        id: '1',
-        path: 'api.status',
-        metadata: { version: 3 },
-      }),
-    ).resolves.toEqual({ data: { v: 3 } });
+      invoke('test:meta-local', 1, { id: '1', path: 'withLocal', metadata: { local: 42 } }),
+    ).resolves.toEqual({ data: { local: 42 } });
+
+    // Invalid metadata fails local schema validation.
+    await expect(
+      invoke('test:meta-local', 1, { id: '2', path: 'withLocal', metadata: { global: 'x' } }),
+    ).resolves.toMatchObject({ error: { name: 'VALIDATION_ERROR' } });
   });
 
   test('joins group paths with handler paths', async () => {

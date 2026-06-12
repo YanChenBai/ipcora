@@ -112,7 +112,6 @@ export class Ipcora<
   private middleware: IpcMiddleware<any, any>[] = [];
   private decorators: AnyRecord = {};
   private store: AnyRecord = {};
-  private metadataSchema: AnySchema | undefined = undefined;
   private installed = false;
 
   constructor(options: IpcoraOptions = {}) {
@@ -294,18 +293,6 @@ export class Ipcora<
     return this as Ipcora<any, TStore, any, TRoutes, TPrefix, TErrors>;
   }
 
-  /**
-   * Set a global metadata schema that applies to every handler on this
-   * instance (and scoped children). Handlers can override it locally by
-   * passing their own `metadata` option.
-   */
-  metadata<const TSchema extends AnySchema>(
-    schema: TSchema,
-  ): Ipcora<TContext, TStore, TMacros, TRoutes, TPrefix, TErrors> {
-    this.metadataSchema = schema;
-    return this;
-  }
-
   onRequest(hook: OnRequestHook<TContext, TStore>): this {
     this.hooks.onRequest.push(hook);
     return this;
@@ -448,11 +435,6 @@ export class Ipcora<
     // on the parent also receive the plugin's hooks (parent first, then plugin).
     for (const key of hookKeys) {
       (this.hooks[key] as unknown[]).push(...(plugin.hooks[key] as unknown[]));
-    }
-
-    // Merge global metadata schema (parent wins on conflict).
-    if (!this.metadataSchema && plugin.metadataSchema) {
-      this.metadataSchema = plugin.metadataSchema;
     }
 
     // Merge state and decorators (parent wins on conflict).
@@ -631,7 +613,7 @@ export class Ipcora<
 
     const paramsSchema = this.composeSchemas([...macroSchemas.params, options.params]);
     const outputSchema = this.composeSchemas([...macroSchemas.output, options.output]);
-    const metadataSchema = options.metadata ?? this.metadataSchema;
+    const metadataSchema = options.metadata;
 
     this.routes.set(fullPath, {
       path: fullPath,
