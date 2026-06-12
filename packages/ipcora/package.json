@@ -53,11 +53,10 @@
     "prepublishOnly": "vp run build"
   },
   "dependencies": {
-    "@standard-schema/spec": "catalog:",
-    "arktype": "catalog:",
-    "pika-events": "catalog:"
+    "@standard-schema/spec": "catalog:"
   },
   "devDependencies": {
+    "arktype": "catalog:",
     "@types/node": "catalog:",
     "bumpp": "catalog:",
     "typescript": "catalog:",

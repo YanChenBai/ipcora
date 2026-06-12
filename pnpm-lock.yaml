@@ -21,9 +21,6 @@ catalogs:
     electron:
       specifier: ^41.7.2
       version: 41.7.2
-    pika-events:
-      specifier: ^0.0.1
-      version: 0.0.1
     typescript:
       specifier: ^6.0.3
       version: 6.0.3
@@ -75,16 +72,13 @@ importers:
       '@standard-schema/spec':
         specifier: 'catalog:'
         version: 1.1.0
-      arktype:
-        specifier: 'catalog:'
-        version: 2.2.0
-      pika-events:
-        specifier: 'catalog:'
-        version: 0.0.1
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.1
+      arktype:
+        specifier: 'catalog:'
+        version: 2.2.0
       bumpp:
         specifier: 'catalog:'
         version: 11.1.0
@@ -1243,9 +1237,6 @@ packages:
     resolution: {integrity: sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A==}
     engines: {node: '>=12'}
 
-  pika-events@0.0.1:
-    resolution: {integrity: sha512-mE8ObQxWtnbrNJEY+8ASukBBkFpyfhDCZQQ7qZNi+5rXQ+ExgC6xaJGlEeEfPy/H9n5tcXhTuWVC9aEXKj4KhA==}
-
   pixelmatch@7.2.0:
     resolution: {integrity: sha512-xhcb4yHu9sM/G7foGzoLtXYcC0zHEaOXXjRKhGup0fw78Nf2Tkiapv4EQyMzrbcmQPsllAI7DbFY2UT7PlI9Pg==}
     hasBin: true
@@ -2352,8 +2343,6 @@ snapshots:
   picocolors@1.1.1: {}
 
   picomatch@4.0.4: {}
-
-  pika-events@0.0.1: {}
 
   pixelmatch@7.2.0:
     dependencies:
