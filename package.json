@@ -1,6 +1,6 @@
 {
   "name": "@ipcora/monorepo",
-  "version": "0.3.0",
+  "version": "0.0.0",
   "private": true,
   "description": "Workspace for ipcora packages.",
   "homepage": "https://github.com/YanChenBai/ipcora#readme",

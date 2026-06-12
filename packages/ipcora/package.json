@@ -1,6 +1,6 @@
 {
   "name": "ipcora",
-  "version": "0.3.0",
+  "version": "0.0.0",
   "description": "Transport-agnostic typed IPC router for TypeScript.",
   "homepage": "https://github.com/YanChenBai/ipcora#readme",
   "bugs": {

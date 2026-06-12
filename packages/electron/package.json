@@ -1,6 +1,6 @@
 {
   "name": "@ipcora/electron",
-  "version": "0.3.0",
+  "version": "0.0.0",
   "description": "Electron transport adapter for ipcora.",
   "homepage": "https://github.com/YanChenBai/ipcora#readme",
   "bugs": {
