@@ -19,18 +19,22 @@
   "type": "module",
   "exports": {
     ".": {
+      "types": "./dist/index.d.mts",
       "dev": "./src/index.ts",
       "default": "./dist/index.mjs"
     },
     "./main": {
+      "types": "./dist/main.d.mts",
       "dev": "./src/main.ts",
       "default": "./dist/main.mjs"
     },
     "./preload": {
+      "types": "./dist/preload.d.mts",
       "dev": "./src/preload.ts",
       "default": "./dist/preload.mjs"
     },
     "./renderer": {
+      "types": "./dist/renderer.d.mts",
       "dev": "./src/renderer.ts",
       "default": "./dist/renderer.mjs"
     },

@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+
 import { defineConfig } from 'vite-plus';
 
 export default defineConfig({
@@ -15,11 +17,13 @@ export default defineConfig({
       deps: {
         neverBundle: ['electron', 'ipcora'],
       },
-      exports: {
-        devExports: 'dev',
-      },
     },
   ],
+  resolve: {
+    alias: {
+      ipcora: fileURLToPath(new URL('../ipcora/src', import.meta.url)),
+    },
+  },
   test: {
     typecheck: {
       enabled: true,
