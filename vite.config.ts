@@ -1,49 +1,42 @@
 import { defineConfig } from 'vite-plus';
 
 export default defineConfig({
+  run: {
+    tasks: {
+      build: 'vp run -r build',
+      test: {
+        command: 'vp test',
+        dependsOn: ['build'],
+      },
+      typecheck: 'vp check --no-fmt --no-lint ',
+    },
+  },
   pack: [
     {
       entry: {
-        renderer: './src/renderer.ts',
-        preload: './src/preload.ts',
         index: './src/index.ts',
-      },
-      platform: 'browser',
-      format: 'esm',
-      dts: true,
-      deps: {
-        neverBundle: ['electron'],
-      },
-      exports: {
-        devExports: 'dev',
-      },
-    },
-    {
-      entry: {
-        main: './src/main/index.ts',
-        typebox: './src/typebox.ts',
       },
       platform: 'node',
       format: 'esm',
       dts: true,
-      deps: {
-        neverBundle: ['electron'],
+      exports: {
+        devExports: 'dev',
       },
-      exports: {},
     },
   ],
   test: {
-    environment: 'jsdom',
-    ui: true,
     typecheck: {
       enabled: true,
     },
-    include: ['./tests/**/*.test.ts'],
+    projects: ['./packages/ipcora/vite.config.ts', './packages/electron/vite.config.ts'],
   },
   fmt: {
-    ignorePatterns: [],
     singleQuote: true,
-    experimentalSortImports: {},
+    sortImports: true,
+    sortTailwindcss: true,
+    sortPackageJson: true,
+    arrowParens: 'avoid',
+    embeddedLanguageFormatting: 'auto',
   },
   lint: {
     plugins: [],
@@ -79,6 +72,7 @@ export default defineConfig({
     ignorePatterns: [],
     options: {
       typeAware: true,
+      typeCheck: true,
     },
   },
   staged: {

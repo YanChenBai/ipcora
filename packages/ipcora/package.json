@@ -1,0 +1,67 @@
+{
+  "name": "ipcora",
+  "version": "0.0.0",
+  "description": "Transport-agnostic typed IPC router for TypeScript.",
+  "homepage": "https://github.com/YanChenBai/ipcora#readme",
+  "bugs": {
+    "url": "https://github.com/YanChenBai/ipcora/issues"
+  },
+  "license": "MIT",
+  "author": "YanChenBai <author.name@mail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YanChenBai/ipcora.git",
+    "directory": "packages/ipcora"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "dev": "./src/index.ts",
+      "default": "./dist/index.mjs"
+    },
+    "./client": {
+      "types": "./dist/client.d.mts",
+      "dev": "./src/client.ts",
+      "default": "./dist/client.mjs"
+    },
+    "./event": {
+      "types": "./dist/event.d.mts",
+      "dev": "./src/event.ts",
+      "default": "./dist/event.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.mjs",
+      "./client": "./dist/client.mjs",
+      "./event": "./dist/event.mjs",
+      "./package.json": "./package.json"
+    },
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "typecheck": "tsc --noEmit",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check",
+    "prepublishOnly": "vp run build"
+  },
+  "dependencies": {
+    "@standard-schema/spec": "catalog:",
+    "arktype": "catalog:",
+    "pika-events": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "bumpp": "catalog:",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
+  }
+}

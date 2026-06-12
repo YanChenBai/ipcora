@@ -1,85 +1,22 @@
 {
-  "name": "type-ipc",
-  "version": "0.3.0",
-  "description": "A starter for creating a TypeScript package.",
-  "homepage": "https://github.com/YanChenBai/type-ipc#readme",
+  "name": "@ipcora/monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Workspace for ipcora packages.",
+  "homepage": "https://github.com/YanChenBai/ipcora#readme",
   "bugs": {
-    "url": "https://github.com/YanChenBai/library/issues"
+    "url": "https://github.com/YanChenBai/ipcora/issues"
   },
   "license": "MIT",
   "author": "YanChenBai <author.name@mail.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YanChenBai/type-ipc.git"
+    "url": "git+https://github.com/YanChenBai/ipcora.git"
   },
-  "files": [
-    "dist"
-  ],
   "type": "module",
-  "exports": {
-    ".": {
-      "dev": "./src/index.ts",
-      "default": "./dist/index.js"
-    },
-    "./main": {
-      "dev": "./src/main/index.ts",
-      "default": "./dist/main.mjs"
-    },
-    "./preload": {
-      "dev": "./src/preload.ts",
-      "default": "./dist/preload.js"
-    },
-    "./renderer": {
-      "dev": "./src/renderer.ts",
-      "default": "./dist/renderer.js"
-    },
-    "./typebox": {
-      "dev": "./src/typebox.ts",
-      "default": "./dist/typebox.mjs"
-    },
-    "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "access": "public",
-    "exports": {
-      ".": "./dist/index.js",
-      "./main": "./dist/main.mjs",
-      "./preload": "./dist/preload.js",
-      "./renderer": "./dist/renderer.js",
-      "./typebox": "./dist/typebox.mjs",
-      "./package.json": "./package.json"
-    }
-  },
-  "scripts": {
-    "build": "vp pack",
-    "dev": "vp pack --watch",
-    "test": "vp test run",
-    "test:ui": "vp test --ui",
-    "typecheck": "tsc --noEmit",
-    "release:prepare": "pnpm lint && nr typecheck && pnpm test && pnpm build",
-    "release": "pnpm release:prepare && bumpp && pnpm publish --access public",
-    "lint": "eslint .",
-    "lint:fix": "pnpm lint --fix",
-    "play": "pnpm --filter ./playground dev"
-  },
-  "dependencies": {
-    "@standard-schema/spec": "^1.1.0",
-    "pika-events": "^0.0.1",
-    "typebox": "^1.1.7"
-  },
   "devDependencies": {
-    "@types/node": "^24.12.0",
-    "@vitest/ui": "^4.1.2",
-    "bumpp": "^11.0.1",
-    "electron": "^41.1.0",
-    "jsdom": "^29.0.1",
-    "simple-git-hooks": "^2.13.1",
-    "typescript": "^6.0.2",
-    "vite-plus": "catalog:",
-    "vitest": "catalog:"
+    "@types/node": "catalog:",
+    "vite-plus": "catalog:"
   },
-  "peerDependencies": {
-    "electron": ">=37.0.0"
-  },
-  "packageManager": "pnpm@10.33.0"
+  "packageManager": "pnpm@11.5.2"
 }

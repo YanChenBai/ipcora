@@ -1,0 +1,74 @@
+{
+  "name": "@ipcora/electron",
+  "version": "0.0.0",
+  "description": "Electron transport adapter for ipcora.",
+  "homepage": "https://github.com/YanChenBai/ipcora#readme",
+  "bugs": {
+    "url": "https://github.com/YanChenBai/ipcora/issues"
+  },
+  "license": "MIT",
+  "author": "YanChenBai <author.name@mail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YanChenBai/ipcora.git",
+    "directory": "packages/electron"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "dev": "./src/index.ts",
+      "default": "./dist/index.mjs"
+    },
+    "./main": {
+      "types": "./dist/main.d.mts",
+      "dev": "./src/main.ts",
+      "default": "./dist/main.mjs"
+    },
+    "./preload": {
+      "types": "./dist/preload.d.mts",
+      "dev": "./src/preload.ts",
+      "default": "./dist/preload.mjs"
+    },
+    "./renderer": {
+      "types": "./dist/renderer.d.mts",
+      "dev": "./src/renderer.ts",
+      "default": "./dist/renderer.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.mjs",
+      "./main": "./dist/main.mjs",
+      "./preload": "./dist/preload.mjs",
+      "./renderer": "./dist/renderer.mjs",
+      "./package.json": "./package.json"
+    },
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "typecheck": "tsc --noEmit",
+    "dev": "vp pack --watch",
+    "test": "vp run ipcora#build && vp test",
+    "check": "vp check",
+    "prepublishOnly": "vp run build"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "bumpp": "catalog:",
+    "electron": "catalog:",
+    "ipcora": "workspace:^",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "electron": ">=40.0.0",
+    "ipcora": "workspace:^"
+  }
+}
