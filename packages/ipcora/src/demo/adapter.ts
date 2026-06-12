@@ -5,62 +5,53 @@
  * no real IPC needed.
  */
 
-import type {
-  IpcAdapter,
-  IpcEvent,
-  IpcRequest,
-  IpcResponse,
-  MaybePromise,
-} from '../index'
+import type { IpcAdapter, IpcEvent, IpcRequest, IpcResponse, MaybePromise } from '../index';
 
 export interface MemoryAdapter {
-  adapter: IpcAdapter
+  adapter: IpcAdapter;
   /** Directly invoke a handler (simulates a peer calling the router). */
-  invoke(channel: string, senderId: number, request: IpcRequest): Promise<IpcResponse>
+  invoke(channel: string, senderId: number, request: IpcRequest): Promise<IpcResponse>;
 }
 
 export function createMemoryAdapter(): MemoryAdapter {
   const handlers = new Map<
     string,
     (event: IpcEvent, request: IpcRequest) => MaybePromise<IpcResponse>
-  >()
+  >();
 
   const adapter: IpcAdapter = {
     handle(channel, handler) {
-      handlers.set(channel, handler)
+      handlers.set(channel, handler);
     },
     emit(channel, sender, payload) {
       // In a real adapter this sends data over the wire.
       // The demo just logs; real adapters push to connected clients.
-      console.log(
-        `  [adapter.emit] channel="${channel}" sender=${sender.id} payload=`,
-        payload,
-      )
+      console.log(`  [adapter.emit] channel="${channel}" sender=${sender.id} payload=`, payload);
     },
     listenerCount(channel) {
-      return handlers.has(channel) ? 1 : 0
+      return handlers.has(channel) ? 1 : 0;
     },
     removeHandler(channel) {
-      handlers.delete(channel)
+      handlers.delete(channel);
     },
-  }
+  };
 
   const invoke = async (
     channel: string,
     senderId: number,
     request: IpcRequest,
   ): Promise<IpcResponse> => {
-    const handler = handlers.get(channel)
+    const handler = handlers.get(channel);
     if (!handler) {
       return {
         error: {
           name: 'ADAPTER_ERROR',
           message: `No handler registered for channel "${channel}"`,
         },
-      }
+      };
     }
-    return handler({ sender: { id: senderId } }, request)
-  }
+    return handler({ sender: { id: senderId } }, request);
+  };
 
-  return { adapter, invoke }
+  return { adapter, invoke };
 }

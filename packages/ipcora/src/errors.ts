@@ -1,10 +1,7 @@
 /**
  * Typed error used by handlers and hooks to produce stable IPC error payloads.
  */
-export class IpcError<
-  TName extends string = string,
-  TData = unknown,
-> extends Error {
+export class IpcError<TName extends string = string, TData = unknown> extends Error {
   readonly data?: TData;
 
   constructor(
@@ -28,22 +25,16 @@ export interface IpcErrorOptions<TData = undefined> {
 }
 
 export function fail<const TName extends string>(name: TName): IpcError<TName, undefined>;
-export function fail<
-  const TName extends string,
-  const TMessage extends string,
->(
+export function fail<const TName extends string, const TMessage extends string>(
   name: TName,
   message: TMessage,
   options?: IpcErrorOptions<undefined>,
 ): IpcError<TName, undefined>;
-export function fail<
-  const TName extends string,
-  const TData,
->(name: TName, options: IpcErrorOptions<TData>): IpcError<TName, TData>;
-export function fail<
-  const TName extends string,
-  const TData,
->(
+export function fail<const TName extends string, const TData>(
+  name: TName,
+  options: IpcErrorOptions<TData>,
+): IpcError<TName, TData>;
+export function fail<const TName extends string, const TData>(
   name: TName,
   message: string,
   options: IpcErrorOptions<TData>,

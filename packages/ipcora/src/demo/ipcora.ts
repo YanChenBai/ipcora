@@ -10,22 +10,22 @@
  *   bind
  */
 
-import { createIpcora, fail, type Ipcora } from "../index";
-import type { AppContext, AppState } from "./types";
-import { ValidationError, DatabaseError } from "./errors";
-import { createMemoryAdapter, type MemoryAdapter } from "./adapter";
+import { defineEventSchema } from '../event';
+import { createIpcora, fail, type Ipcora } from '../index';
+import { createMemoryAdapter, type MemoryAdapter } from './adapter';
+import { ValidationError, DatabaseError } from './errors';
 import {
   createUserParams,
   getUserParams,
   simulateErrorParams,
   userOutput,
   userLoginEvent,
-} from "./schemas";
-import { defineEventSchema } from "../event";
+} from './schemas';
+import type { AppContext, AppState } from './types';
 
 export interface AppIpcora {
   ipc: Ipcora<AppContext, AppState, any, any, any, any>;
-  invoke: MemoryAdapter["invoke"];
+  invoke: MemoryAdapter['invoke'];
   state: AppState;
   memory: MemoryAdapter;
 }
@@ -41,7 +41,7 @@ export function createAppIpcora(opts?: { exposeStack?: boolean }): AppIpcora {
   // ====== Router ===========================================================
 
   const ipc = createIpcora<AppContext, AppState>({
-    channel: "app:ipc",
+    channel: 'app:ipc',
     adapter: memory.adapter,
     exposeStack: opts?.exposeStack,
   })
@@ -49,7 +49,7 @@ export function createAppIpcora(opts?: { exposeStack?: boolean }): AppIpcora {
     .state(state)
 
     // ── decorate: static properties on every lifecycle value ───────────
-    .decorate({ serviceName: "user-service", version: "1.0.0" })
+    .decorate({ serviceName: 'user-service', version: '1.0.0' })
 
     // ── derive: runs BEFORE validation (raw request info) ──────────────
     .derive(({ rawParams, metadata }) => ({
@@ -64,11 +64,11 @@ export function createAppIpcora(opts?: { exposeStack?: boolean }): AppIpcora {
 
     // ── onTransform: normalize params before validation ────────────────
     .onTransform(({ params }) => {
-      if (params && typeof params === "object") {
+      if (params && typeof params === 'object') {
         const p = params as Record<string, unknown>;
         const trimmed: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(p)) {
-          trimmed[k] = typeof v === "string" ? (v as string).trim() : v;
+          trimmed[k] = typeof v === 'string' ? (v as string).trim() : v;
         }
         return trimmed;
       }
@@ -76,8 +76,8 @@ export function createAppIpcora(opts?: { exposeStack?: boolean }): AppIpcora {
 
     // ── resolve: runs AFTER validation (derived from parsed params) ────
     .resolve(({ peer, metadata }) => ({
-      requestId: `req-${metadata.traceId ?? "no-trace"}-${peer.id}`,
-      locale: "zh-CN",
+      requestId: `req-${metadata.traceId ?? 'no-trace'}-${peer.id}`,
+      locale: 'zh-CN',
     }))
 
     // ── onGuard: global auth / role resolution ─────────────────────────
@@ -87,7 +87,7 @@ export function createAppIpcora(opts?: { exposeStack?: boolean }): AppIpcora {
         | undefined;
       return {
         currentUser: user,
-        isAdmin: user?.role === "admin",
+        isAdmin: user?.role === 'admin',
       };
     })
 
@@ -107,36 +107,36 @@ export function createAppIpcora(opts?: { exposeStack?: boolean }): AppIpcora {
 
     // ── error: map custom Error classes to IpcError payloads ───────────
     .error(ValidationError, ({ fail, error }) =>
-      fail("VALIDATION_CUSTOM", { message: error.message }),
+      fail('VALIDATION_CUSTOM', { message: error.message }),
     )
-    .error(DatabaseError, ({ fail, error }) => fail("DB_UNAVAILABLE", { message: error.message }))
+    .error(DatabaseError, ({ fail, error }) => fail('DB_UNAVAILABLE', { message: error.message }))
 
     // ── onError: global error observer / rewriter ──────────────────────
     .onError(({ name, phase, path }) => {
       console.log(`  [onError] name="${name}" phase="${phase}" path="${path}"`);
-      if (name === "DB_UNAVAILABLE") {
-        return { error: { name, message: "Database is temporarily unavailable" } };
+      if (name === 'DB_UNAVAILABLE') {
+        return { error: { name, message: 'Database is temporarily unavailable' } };
       }
       // Returning undefined lets the default error response through.
     })
 
     // ── macro: reusable option `requireAdmin` ──────────────────────────
-    .macro("requireAdmin", {
+    .macro('requireAdmin', {
       onGuard({ isAdmin, fail }) {
         if (!isAdmin) {
-          throw fail("FORBIDDEN", { message: "Admin role required" });
+          throw fail('FORBIDDEN', { message: 'Admin role required' });
         }
       },
     })
 
     // ── onBeforeHandle: shared guard (abort check) ─────────────────────
     .onBeforeHandle(({ signal }) => {
-      if (signal.aborted) throw fail("ABORTED", { message: "Request aborted" });
+      if (signal.aborted) throw fail('ABORTED', { message: 'Request aborted' });
     })
 
     // ── onAfterHandle: wrap outputs with a timestamp ───────────────────
     .onAfterHandle(({ output }) => {
-      if (output && typeof output === "object" && !Array.isArray(output)) {
+      if (output && typeof output === 'object' && !Array.isArray(output)) {
         return { ...(output as object), _handledAt: Date.now() };
       }
     })
@@ -163,7 +163,7 @@ export function createAppIpcora(opts?: { exposeStack?: boolean }): AppIpcora {
 
   // ====== Group: admin -------------------------------------------------------
 
-  ipc.group("admin", (admin) => {
+  ipc.group('admin', admin => {
     return admin
       .use<{ adminAudit: true }>((ctx, next) => {
         console.log(`  [admin mw] path=${ctx.path}`);
@@ -171,7 +171,7 @@ export function createAppIpcora(opts?: { exposeStack?: boolean }): AppIpcora {
       })
 
       .handler(
-        "stats",
+        'stats',
         ({ store }) => ({
           totalUsers: store.users.size,
           uptime: process.uptime(),
@@ -179,14 +179,14 @@ export function createAppIpcora(opts?: { exposeStack?: boolean }): AppIpcora {
         { requireAdmin: true },
       )
 
-      .handler("dangerousOp", ({ tenant }) => `Executed dangerous operation in tenant "${tenant}"`);
+      .handler('dangerousOp', ({ tenant }) => `Executed dangerous operation in tenant "${tenant}"`);
   });
 
   // ====== Handler: user.create (admin only, with schemas) --------------------
 
   ipc.handler(
-    "user.create",
-    ({ store, tenant, requestId, params }) => {
+    'user.create',
+    ({ store, tenant, params }) => {
       store.seq += 1;
       const id = `${tenant}-u${store.seq}`;
       const record = {
@@ -211,11 +211,11 @@ export function createAppIpcora(opts?: { exposeStack?: boolean }): AppIpcora {
   // ====== Handler: user.get (public, with schema) ----------------------------
 
   ipc.handler(
-    "user.get",
+    'user.get',
     ({ store, params }) => {
       const user = store.users.get(params.id);
       if (!user) {
-        throw fail("NOT_FOUND", { message: `User "${params.id}" not found` });
+        throw fail('NOT_FOUND', { message: `User "${params.id}" not found` });
       }
       return user;
     },
@@ -227,7 +227,7 @@ export function createAppIpcora(opts?: { exposeStack?: boolean }): AppIpcora {
 
   // ====== Handler: user.list (public, no params) -----------------------------
 
-  ipc.handler("user.list", ({ store, requestId }) => ({
+  ipc.handler('user.list', ({ store, requestId }) => ({
     items: [...store.users.values()],
     total: store.users.size,
     requestId,
@@ -235,7 +235,7 @@ export function createAppIpcora(opts?: { exposeStack?: boolean }): AppIpcora {
 
   // ====== Handler: system.health (no params) ---------------------------------
 
-  ipc.handler("system.health", ({ serviceName, version, enteredAt, logPrefix }) => ({
+  ipc.handler('system.health', ({ serviceName, version, enteredAt, logPrefix }) => ({
     service: serviceName,
     version,
     uptime: Date.now() - enteredAt!,
@@ -245,15 +245,15 @@ export function createAppIpcora(opts?: { exposeStack?: boolean }): AppIpcora {
   // ====== Handler: db.simulateError (custom error classes demo) ---------------
 
   ipc.handler(
-    "db.simulateError",
+    'db.simulateError',
     ({ params }) => {
       switch (params.type) {
-        case "validation":
-          throw new ValidationError("Simulated validation failure");
-        case "database":
-          throw new DatabaseError("Simulated database failure");
-        case "unknown":
-          throw new Error("Simulated unknown error");
+        case 'validation':
+          throw new ValidationError('Simulated validation failure');
+        case 'database':
+          throw new DatabaseError('Simulated database failure');
+        case 'unknown':
+          throw new Error('Simulated unknown error');
         default:
           return { ok: true, type: params.type };
       }
@@ -263,11 +263,11 @@ export function createAppIpcora(opts?: { exposeStack?: boolean }): AppIpcora {
 
   // ====== Bind a peer ======================================================
 
-  ipc.bind({ id: 1, sender: { id: 1 } }, { context: { tenant: "acme-corp" } });
+  ipc.bind({ id: 1, sender: { id: 1 } }, { context: { tenant: 'acme-corp' } });
 
   return { ipc, invoke: memory.invoke, state, memory };
 }
 
 // Re-export the factory return type for consumers
-export type { AppState, AppContext } from "./types";
-export { createMemoryAdapter } from "./adapter";
+export type { AppState, AppContext } from './types';
+export { createMemoryAdapter } from './adapter';

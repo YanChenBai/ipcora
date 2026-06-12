@@ -1,4 +1,4 @@
-import { fail, IpcError } from "./errors";
+import { fail, IpcError } from './errors';
 import type {
   AnyMacroDefinition,
   AnyMacroEntry,
@@ -56,7 +56,7 @@ import type {
   ResolveHook,
   RouteHandler,
   RuntimeContext,
-} from "./types";
+} from './types';
 import {
   builtInHandlerOptionKeys,
   cloneHooks,
@@ -64,11 +64,11 @@ import {
   joinPath,
   normalizeObjectParams,
   parseSchema,
-} from "./utils";
+} from './utils';
 
 const isDevMode = (): boolean => {
   try {
-    if (typeof process !== "undefined" && process.env?.NODE_ENV !== "production") return true;
+    if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') return true;
   } catch {
     /* noop */
   }
@@ -84,7 +84,7 @@ export class Ipcora<
   TStore extends object = {},
   TMacros extends MacroRegistry = {},
   TRoutes extends object = {},
-  TPrefix extends string = "",
+  TPrefix extends string = '',
   TErrors = never,
 > {
   /** IPC channel name used by the adapter. */
@@ -104,10 +104,10 @@ export class Ipcora<
   private readonly routes: Map<string, HandlerDefinition<any, any>>;
   private readonly eventSchemas: Map<string, AnySchema>;
   private readonly bindings: Map<number, Binding<any>>;
-  private readonly options: Required<Pick<IpcoraOptions, "exposeStack">> & IpcoraOptions;
+  private readonly options: Required<Pick<IpcoraOptions, 'exposeStack'>> & IpcoraOptions;
   private readonly macros: Map<string, AnyMacroEntry>;
   private readonly errorMappers: Map<AnyErrorConstructor, (error: Error) => IpcError>;
-  private prefix = "";
+  private prefix = '';
   private hooks: HookStore<any, any>;
   private middleware: IpcMiddleware<any, any>[] = [];
   private decorators: AnyRecord = {};
@@ -116,7 +116,7 @@ export class Ipcora<
   private installed = false;
 
   constructor(options: IpcoraOptions = {}) {
-    this.channel = options.channel ?? "ipcora:invoke";
+    this.channel = options.channel ?? 'ipcora:invoke';
     this.name = options.name;
     this.abstract = options.abstract ?? false;
     this.options = { exposeStack: isDevMode(), ...options };
@@ -284,7 +284,7 @@ export class Ipcora<
     nameOrDefinitions: string | Record<string, AnyMacroEntry>,
     definition?: AnyMacroEntry,
   ): Ipcora<any, TStore, any, TRoutes, TPrefix, TErrors> {
-    if (typeof nameOrDefinitions === "string") {
+    if (typeof nameOrDefinitions === 'string') {
       this.macros.set(nameOrDefinitions, definition!);
     } else {
       for (const [name, entry] of Object.entries(nameOrDefinitions)) {
@@ -377,16 +377,9 @@ export class Ipcora<
   use<TPlugin extends Ipcora<any, any, any, any, any, any>>(
     plugin: TPlugin,
   ): Ipcora<
-    Expand<
-      TContext &
-        (TPlugin extends Ipcora<infer TC, any, any, any, any, any> ? TC : {})
-    >,
-    Expand<
-      TStore &
-        (TPlugin extends Ipcora<any, infer TS, any, any, any, any> ? TS : {})
-    >,
-    TMacros &
-      (TPlugin extends Ipcora<any, any, infer TM, any, any, any> ? TM : {}),
+    Expand<TContext & (TPlugin extends Ipcora<infer TC, any, any, any, any, any> ? TC : {})>,
+    Expand<TStore & (TPlugin extends Ipcora<any, infer TS, any, any, any, any> ? TS : {})>,
+    TMacros & (TPlugin extends Ipcora<any, any, infer TM, any, any, any> ? TM : {}),
     Merge<TRoutes, TPlugin extends Ipcora<any, any, any, infer TR, any, any> ? TR : {}>,
     TPrefix,
     TErrors | (TPlugin extends Ipcora<any, any, any, any, any, infer TE> ? TE : never)
@@ -437,8 +430,16 @@ export class Ipcora<
     // plugin's existing routes without double-counting the plugin's own
     // hooks/middleware (which are already baked into each route definition).
     const hookKeys: (keyof HookStore<any, any>)[] = [
-      "onRequest", "onTransform", "derive", "resolve", "onGuard",
-      "onBeforeHandle", "onAfterHandle", "onMapResponse", "onError", "onAfterResponse",
+      'onRequest',
+      'onTransform',
+      'derive',
+      'resolve',
+      'onGuard',
+      'onBeforeHandle',
+      'onAfterHandle',
+      'onMapResponse',
+      'onError',
+      'onAfterResponse',
     ];
     const parentHooks = cloneHooks(this.hooks);
     const parentMiddleware = [...this.middleware];
@@ -529,21 +530,21 @@ export class Ipcora<
   ): Ipcora<any, any, any, any, any, any> {
     if (errorsOrError instanceof Map) {
       for (const [constructor, mapper] of errorsOrError) {
-        this.errorMappers.set(constructor, (error) => mapper({ fail, error }));
+        this.errorMappers.set(constructor, error => mapper({ fail, error }));
       }
       return this as Ipcora<any, any, any, any, any, any>;
     }
 
-    if (typeof errorsOrError === "function") {
+    if (typeof errorsOrError === 'function') {
       this.errorMappers.set(
         errorsOrError,
-        (error) => map?.({ fail, error }) ?? this.defaultError(errorsOrError, error),
+        error => map?.({ fail, error }) ?? this.defaultError(errorsOrError, error),
       );
       return this as Ipcora<any, any, any, any, any, any>;
     }
 
     for (const [name, constructor] of Object.entries(errorsOrError)) {
-      this.errorMappers.set(constructor, (error) => this.defaultError(constructor, error, name));
+      this.errorMappers.set(constructor, error => this.defaultError(constructor, error, name));
     }
     return this as Ipcora<any, any, any, any, any, any>;
   }
@@ -569,21 +570,21 @@ export class Ipcora<
     path: TPath,
     handler: THandler,
     options: HandlerOptions<
-        TParamsSchema,
-        TOutputSchema,
-        TMetadataSchema,
-        TContext,
-        TStore,
-        TMacros
-      > &
+      TParamsSchema,
+      TOutputSchema,
+      TMetadataSchema,
+      TContext,
+      TStore,
+      TMacros
+    > &
       TOptions = {} as HandlerOptions<
-        TParamsSchema,
-        TOutputSchema,
-        TMetadataSchema,
-        TContext,
-        TStore,
-        TMacros
-      > &
+      TParamsSchema,
+      TOutputSchema,
+      TMetadataSchema,
+      TContext,
+      TStore,
+      TMacros
+    > &
       TOptions,
   ): Ipcora<
     TContext,
@@ -697,7 +698,7 @@ export class Ipcora<
     const parsedPayload = await parseSchema(schema, payload);
     const adapter = this.options.adapter;
     if (!adapter) {
-      throw new Error("IPC adapter is required. Pass an adapter to createIpcora({ adapter }).");
+      throw new Error('IPC adapter is required. Pass an adapter to createIpcora({ adapter }).');
     }
 
     const bindings = options.peers
@@ -705,7 +706,7 @@ export class Ipcora<
       : this.bindings.values();
     const channel = this.eventChannel(name);
     await Promise.all(
-      [...bindings].map((binding) => adapter.emit(channel, binding.peer.sender, parsedPayload)),
+      [...bindings].map(binding => adapter.emit(channel, binding.peer.sender, parsedPayload)),
     );
   }
 
@@ -779,14 +780,14 @@ export class Ipcora<
   ): void {
     if (option === false) return;
     if (depth >= 16) {
-      throw new Error("Macro expansion depth exceeded. Check for circular macro dependencies.");
+      throw new Error('Macro expansion depth exceeded. Check for circular macro dependencies.');
     }
 
     const macro = this.resolveMacroEntry(entry, option);
     if (!macro) return;
 
     const seed = macro.seed ?? option;
-    const dedupeKey = `${seed === undefined ? "undefined" : JSON.stringify(seed)}:${this.findMacroName(entry) ?? ""}`;
+    const dedupeKey = `${seed === undefined ? 'undefined' : JSON.stringify(seed)}:${this.findMacroName(entry) ?? ''}`;
     if (seen.has(dedupeKey)) return;
     seen.add(dedupeKey);
 
@@ -846,10 +847,10 @@ export class Ipcora<
   }
 
   private resolveMacroEntry(entry: AnyMacroEntry, option: unknown): AnyMacroDefinition | void {
-    if (typeof entry !== "function") return entry;
+    if (typeof entry !== 'function') return entry;
     const definition = entry(option);
-    if (definition && typeof (definition as Promise<unknown>).then === "function") {
-      throw new Error("Async macro factories are not supported during handler registration.");
+    if (definition && typeof (definition as Promise<unknown>).then === 'function') {
+      throw new Error('Async macro factories are not supported during handler registration.');
     }
     return definition as AnyMacroDefinition | void;
   }
@@ -861,7 +862,7 @@ export class Ipcora<
   }
 
   private isMacroDefinitionKey(key: string): boolean {
-    return builtInHandlerOptionKeys.has(key) || key === "seed";
+    return builtInHandlerOptionKeys.has(key) || key === 'seed';
   }
 
   private composeSchemas(schemas: (AnySchema | undefined)[]): AnySchema | undefined {
@@ -870,14 +871,14 @@ export class Ipcora<
     if (active.length === 1) return active[0];
 
     return {
-      "~standard": {
+      '~standard': {
         version: 1,
-        vendor: "ipcora",
-        validate: async (value) => {
+        vendor: 'ipcora',
+        validate: async value => {
           let current = value;
           for (const schema of active) {
-            const result = await schema["~standard"].validate(current);
-            if ("issues" in result && result.issues) return result;
+            const result = await schema['~standard'].validate(current);
+            if ('issues' in result && result.issues) return result;
             current = result.value;
           }
           return { value: current };
@@ -907,12 +908,12 @@ export class Ipcora<
   }
 
   private assignRouteDefinition(path: string, hasParams: boolean): void {
-    const parts = path.split(".").filter(Boolean);
+    const parts = path.split('.').filter(Boolean);
     let node = this.definition as AnyRecord;
 
     for (const part of parts.slice(0, -1)) {
       const current = node[part];
-      if (!current || typeof current !== "object") {
+      if (!current || typeof current !== 'object') {
         node[part] = {};
       }
       node = node[part] as AnyRecord;
@@ -927,7 +928,7 @@ export class Ipcora<
   }
 
   private assignEventDefinition(name: string, channel: string, once: boolean): void {
-    const key = `${once ? "onOnce" : "on"}${capitalize(name)}`;
+    const key = `${once ? 'onOnce' : 'on'}${capitalize(name)}`;
     const definition = function ipcoraEventDefinition() {};
     Object.defineProperties(definition, {
       __ipcoraEvent: { value: true },
@@ -946,7 +947,7 @@ export class Ipcora<
   private resolveEventBindings(peers: Iterable<IpcPeer | number>): Binding<any>[] {
     const bindings: Binding<any>[] = [];
     for (const peer of peers) {
-      const id = typeof peer === "number" ? peer : peer.id;
+      const id = typeof peer === 'number' ? peer : peer.id;
       const binding = this.bindings.get(id);
       if (binding) bindings.push(binding);
     }
@@ -965,7 +966,7 @@ export class Ipcora<
 
     const { adapter } = this.options;
     if (!adapter) {
-      throw new Error("IPC adapter is required. Pass an adapter to createIpcora({ adapter }).");
+      throw new Error('IPC adapter is required. Pass an adapter to createIpcora({ adapter }).');
     }
     if (adapter.listenerCount(this.channel) > 0) {
       throw new Error(`IPC channel already registered: ${this.channel}`);
@@ -978,12 +979,12 @@ export class Ipcora<
   private async dispatch(event: IpcEvent, request: IpcRequest): Promise<IpcResponse> {
     const binding = this.bindings.get(event.sender.id);
     if (!binding) {
-      return this.errorResponse(fail("PEER_NOT_BOUND"));
+      return this.errorResponse(fail('PEER_NOT_BOUND'));
     }
     const definition = this.routes.get(request.path);
     if (!definition) {
       return this.errorResponse(
-        fail("HANDLER_NOT_FOUND", {
+        fail('HANDLER_NOT_FOUND', {
           message: `IPC handler not found: ${request.path}`,
         }),
       );
@@ -991,7 +992,7 @@ export class Ipcora<
 
     const startedAt = performance.now();
     let metadata: Readonly<Record<string, unknown>> = Object.freeze({ ...request.metadata });
-    let phase: LifecyclePhase = "onRequest";
+    let phase: LifecyclePhase = 'onRequest';
     let params: unknown = request.params;
     let output: unknown;
     let response: IpcResponse | undefined;
@@ -1023,13 +1024,13 @@ export class Ipcora<
 
       // Transform and derive run before validation so they can normalize raw params
       // and add request-derived context before schemas are evaluated.
-      phase = "onTransform";
+      phase = 'onTransform';
       for (const hook of definition.hooks.onTransform) {
         const next = await hook({ ...base(), params });
         if (next !== undefined) params = next;
       }
 
-      phase = "derive";
+      phase = 'derive';
       for (const hook of definition.hooks.derive) {
         const extension = await hook({ ...base(), params, rawParams: request.params });
         if (extension) context = { ...context, ...extension };
@@ -1037,35 +1038,35 @@ export class Ipcora<
 
       // onGuard runs before validation so it can short-circuit early
       // without paying schema validation cost. Guards receive raw params.
-      phase = "onGuard";
+      phase = 'onGuard';
       for (const hook of definition.hooks.onGuard) {
         const extension = await hook({ ...base(), params });
         if (extension) context = { ...context, ...extension };
       }
 
-      phase = "validation";
+      phase = 'validation';
       const validatedMeta = await parseSchema(definition.metadataSchema, metadata);
       metadata = Object.freeze({ ...(validatedMeta as Record<string, unknown>) });
       params = await parseSchema(definition.paramsSchema, params);
 
-      phase = "resolve";
+      phase = 'resolve';
       for (const hook of definition.hooks.resolve) {
         const extension = await hook({ ...base(), params, rawParams: request.params });
         if (extension) context = { ...context, ...extension };
       }
 
-      phase = "onBeforeHandle";
+      phase = 'onBeforeHandle';
       for (const hook of definition.hooks.onBeforeHandle) {
         await hook({ ...base(), params });
       }
 
-      phase = "handler";
+      phase = 'handler';
       output = await this.executeMiddleware(definition, params, context, base);
       if (output instanceof IpcError) {
         throw output;
       }
 
-      phase = "onAfterHandle";
+      phase = 'onAfterHandle';
       for (const hook of [...definition.hooks.onAfterHandle].reverse()) {
         const next = await hook({ ...base(), params, output });
         if (next !== undefined) output = next;
@@ -1075,11 +1076,11 @@ export class Ipcora<
         throw output;
       }
 
-      phase = "validation";
+      phase = 'validation';
       output = await parseSchema(definition.outputSchema, output);
       response = { data: output };
 
-      phase = "onMapResponse";
+      phase = 'onMapResponse';
       for (const hook of [...definition.hooks.onMapResponse].reverse()) {
         const next = await hook({ ...base(), params, output, response });
         if (next !== undefined) response = next;
@@ -1088,7 +1089,7 @@ export class Ipcora<
       caught = error;
       const failedPhase = phase;
       const normalized = this.normalizeError(error);
-      phase = "onError";
+      phase = 'onError';
       for (const hook of [...definition.hooks.onError].reverse()) {
         const handled = await hook({
           ...base(),
@@ -1108,7 +1109,7 @@ export class Ipcora<
     }
 
     const duration = performance.now() - startedAt;
-    phase = "onAfterResponse";
+    phase = 'onAfterResponse';
     for (const hook of [...definition.hooks.onAfterResponse].reverse()) {
       try {
         await hook({
@@ -1143,7 +1144,7 @@ export class Ipcora<
       if (!middleware) {
         return definition.handler({ ...base(), ...context, params });
       }
-      return middleware({ ...base(), ...context, params }, (extension) =>
+      return middleware({ ...base(), ...context, params }, extension =>
         dispatch(index + 1, { ...context, ...extension }),
       );
     };
@@ -1177,8 +1178,8 @@ export class Ipcora<
     }
 
     const normalized = new Error(String(error));
-    return fail("INTERNAL_SERVER_ERROR", {
-      message: "Internal IPC error",
+    return fail('INTERNAL_SERVER_ERROR', {
+      message: 'Internal IPC error',
       cause: normalized,
     });
   }
@@ -1208,15 +1209,15 @@ function capitalize(value: string): string {
 function createEventEmitter(ipcora: Ipcora<any, any, any, any, any, any>): unknown {
   return new Proxy(Object.create(null), {
     get(_target, property) {
-      if (property === "then") {
+      if (property === 'then') {
         return undefined;
       }
 
       if (property === Symbol.toStringTag) {
-        return "IpcoraEventEmitter";
+        return 'IpcoraEventEmitter';
       }
 
-      if (typeof property !== "string") {
+      if (typeof property !== 'string') {
         return undefined;
       }
 

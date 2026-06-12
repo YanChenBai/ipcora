@@ -7,5 +7,5 @@
  *   npx tsx src/demo.ts
  */
 
-export { runDemo, createAppIpcora, createMemoryAdapter } from './demo/index'
-export type { AppIpcora, AppState, AppContext } from './demo/index'
+export { runDemo, createAppIpcora, createMemoryAdapter } from './demo/index';
+export type { AppIpcora, AppState, AppContext } from './demo/index';

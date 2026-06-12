@@ -3,21 +3,21 @@
  */
 
 export interface UserRecord {
-  id: string
-  name: string
-  email: string
-  createdAt: number
+  id: string;
+  name: string;
+  email: string;
+  createdAt: number;
 }
 
 export interface AppState {
-  users: Map<string, UserRecord>
-  seq: number
+  users: Map<string, UserRecord>;
+  seq: number;
 }
 
 export interface AppContext {
-  tenant: string
-  requestId: string
-  locale: string
-  isAdmin: boolean
-  currentUser?: { id: string; role: string }
+  tenant: string;
+  requestId: string;
+  locale: string;
+  isAdmin: boolean;
+  currentUser?: { id: string; role: string };
 }

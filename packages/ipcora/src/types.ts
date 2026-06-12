@@ -86,10 +86,7 @@ export type IpcResponse<T = unknown> =
   | { data: T; error?: undefined }
   | { data?: undefined; error: IpcErrorPayload };
 
-export type IpcErrorPayload<
-  TName extends string = string,
-  TData = unknown,
-> = {
+export type IpcErrorPayload<TName extends string = string, TData = unknown> = {
   name: TName;
   message: string;
   data?: TData;
