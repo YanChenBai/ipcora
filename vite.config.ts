@@ -1,26 +1,23 @@
-import { defineConfig } from 'vite-plus';
+import { defineConfig } from "vite-plus";
 
 export default defineConfig({
   run: {
     tasks: {
-      build: 'vp run -r build',
-      test: {
-        command: 'vp test',
-        dependsOn: ['build'],
-      },
-      typecheck: 'vp check --no-fmt --no-lint ',
+      build: "vp run -r build",
+      test: "vp test --typecheck",
+      typecheck: "vp check --no-fmt --no-lint",
     },
   },
   pack: [
     {
       entry: {
-        index: './src/index.ts',
+        index: "./src/index.ts",
       },
-      platform: 'node',
-      format: 'esm',
+      platform: "node",
+      format: "esm",
       dts: true,
       exports: {
-        devExports: 'dev',
+        devExports: "dev",
       },
     },
   ],
@@ -28,23 +25,23 @@ export default defineConfig({
     typecheck: {
       enabled: true,
     },
-    projects: ['./packages/ipcora/vite.config.ts', './packages/electron/vite.config.ts'],
+    projects: ["./packages/ipcora/vite.config.ts", "./packages/electron/vite.config.ts"],
   },
   fmt: {
     singleQuote: true,
     sortImports: true,
     sortTailwindcss: true,
     sortPackageJson: true,
-    arrowParens: 'avoid',
-    embeddedLanguageFormatting: 'auto',
+    arrowParens: "avoid",
+    embeddedLanguageFormatting: "auto",
   },
   lint: {
     plugins: [],
     categories: {},
     rules: {},
     settings: {
-      'jsx-a11y': {
-        polymorphicPropName: 'as',
+      "jsx-a11y": {
+        polymorphicPropName: "as",
         components: {},
         attributes: {},
       },
@@ -76,6 +73,6 @@ export default defineConfig({
     },
   },
   staged: {
-    '*': 'vp check --fix',
+    "*": "vp check --fix",
   },
 });

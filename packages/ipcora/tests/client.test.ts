@@ -42,7 +42,7 @@ describe('createClient', () => {
       }
     });
 
-    const client = createClient<typeof server>(server, {
+    const client = createClient<typeof server>({
       invoke,
     });
 
@@ -69,7 +69,7 @@ describe('createClient', () => {
       };
     });
 
-    const client = createClient<typeof server>(server, {
+    const client = createClient<typeof server>({
       invoke,
     });
 
@@ -90,7 +90,7 @@ describe('createClient', () => {
   test('passes object parameters', async () => {
     const invoke = vi.fn(({ args }) => args[0]);
 
-    const client = createClient<typeof server>(server, {
+    const client = createClient<typeof server>({
       invoke,
     });
 
@@ -121,7 +121,7 @@ describe('createClient', () => {
       };
     });
 
-    const client = createClient<typeof server>(server, {
+    const client = createClient<typeof server>({
       invoke,
     });
 
@@ -135,51 +135,36 @@ describe('createClient', () => {
   });
 
   test('does not expose client as a promise', () => {
-    const client = createClient<typeof server>(server, {
+    const client = createClient<typeof server>({
       invoke: vi.fn(),
     });
 
     expect((client as unknown as { then?: unknown }).then).toBeUndefined();
   });
 
-  test('throws when calling a namespace', () => {
-    const client = createClient<typeof server>(server, {
-      invoke: vi.fn(),
+  test('calls arbitrary paths without a runtime definition', async () => {
+    const invoke = vi.fn(() => 'ok');
+    const client = createClient<typeof server>({
+      invoke,
     });
 
-    expect(() => {
-      (client.invoke.window as unknown as (...args: unknown[]) => unknown)();
-    }).toThrow('"window" is a namespace and cannot be called');
-  });
-
-  test('throws when accessing an unknown path', () => {
-    const client = createClient<typeof server>(server, {
-      invoke: vi.fn(),
-    });
-
-    expect(() => {
+    await expect(
       (
         client.invoke as unknown as {
           unknown: {
-            method(): unknown;
+            method(value: string): Promise<unknown>;
           };
         }
-      ).unknown.method();
-    }).toThrow('Unknown client path: "unknown"');
-  });
+      ).unknown.method('value'),
+    ).resolves.toEqual({ data: 'ok', error: null });
 
-  test('throws when accessing a child property of a method', () => {
-    const client = createClient<typeof server>(server, {
-      invoke: vi.fn(),
+    expect(invoke).toHaveBeenCalledWith({
+      path: ['unknown', 'method'],
+      channel: 'unknown.method',
+      namespace: 'unknown',
+      method: 'method',
+      args: ['value'],
     });
-
-    expect(() => {
-      (
-        client.invoke.window.open as unknown as {
-          invalid(): unknown;
-        }
-      ).invalid();
-    }).toThrow('"window.open" is not a namespace');
   });
 
   test('does not execute the server implementation directly', async () => {
@@ -195,7 +180,7 @@ describe('createClient', () => {
 
     const invoke = vi.fn(() => 'client result');
 
-    const client = createClient<typeof definition>(definition, {
+    const client = createClient<typeof definition>({
       invoke,
     });
 
@@ -224,7 +209,7 @@ describe('events', () => {
       return unsubscribe;
     });
     type IpcDefinition = InferDefinition<typeof ipc>;
-    const client: Client<IpcDefinition> = createClient<IpcDefinition>(ipc.definition, {
+    const client: Client<IpcDefinition> = createClient<IpcDefinition>({
       invoke: vi.fn(),
       subscribe,
     });
@@ -260,7 +245,7 @@ describe('events', () => {
       return unsubscribe;
     });
     type IpcDefinition = InferDefinition<typeof ipc>;
-    const client: Client<IpcDefinition> = createClient<IpcDefinition>(ipc.definition, {
+    const client: Client<IpcDefinition> = createClient<IpcDefinition>({
       invoke: vi.fn(),
       subscribe,
     });
@@ -289,7 +274,7 @@ describe('events', () => {
       }),
     );
     type IpcDefinition = InferDefinition<typeof ipc>;
-    const client: Client<IpcDefinition> = createClient<IpcDefinition>(ipc.definition, {
+    const client: Client<IpcDefinition> = createClient<IpcDefinition>({
       invoke: vi.fn(),
     });
 
@@ -308,7 +293,7 @@ describe('metadata', () => {
   test('static metadata is merged into every call', async () => {
     const invoke = vi.fn(() => 'result');
 
-    const client = createClient<typeof metaDefinition>(metaDefinition, {
+    const client = createClient<typeof metaDefinition>({
       invoke,
       metadata: { env: 'test', version: 1 },
     });
@@ -325,7 +310,7 @@ describe('metadata', () => {
     const invoke = vi.fn(() => 'result');
     const onMetadata = vi.fn(call => ({ channel: call.channel, dynamic: true }));
 
-    const client = createClient<typeof metaDefinition>(metaDefinition, {
+    const client = createClient<typeof metaDefinition>({
       invoke,
       onMetadata,
     });
@@ -344,7 +329,7 @@ describe('metadata', () => {
   test('onMetadata hook result overrides static metadata', async () => {
     const invoke = vi.fn(() => 'result');
 
-    const client = createClient<typeof metaDefinition>(metaDefinition, {
+    const client = createClient<typeof metaDefinition>({
       invoke,
       metadata: { a: 1, b: 2 },
       onMetadata: () => ({ b: 3, c: 4 }),
@@ -362,7 +347,7 @@ describe('metadata', () => {
   test('per-call metadata overrides both static and hook', async () => {
     const invoke = vi.fn(() => 'result');
 
-    const client = createClient<typeof metaDefinition>(metaDefinition, {
+    const client = createClient<typeof metaDefinition>({
       invoke,
       metadata: { a: 1, b: 2 },
       onMetadata: () => ({ b: 3, c: 4 }),
@@ -378,25 +363,28 @@ describe('metadata', () => {
     );
   });
 
-  test('per-call metadata on no-params route', async () => {
-    const invoke = vi.fn(() => 'result');
+  test('single object argument is treated as params without a runtime definition', async () => {
+    const invoke = vi.fn((_call: any) => 'result');
 
-    const client = createClient<typeof metaDefinition>(metaDefinition, { invoke });
+    const client = createClient<typeof metaDefinition>({ invoke });
 
-    await client.invoke.noParams({ traceId: 'abc-123' });
+    await (client.invoke.noParams as unknown as (value: unknown) => Promise<unknown>)({
+      traceId: 'abc-123',
+    });
 
     expect(invoke).toHaveBeenCalledWith(
       expect.objectContaining({
-        args: [],
-        metadata: { traceId: 'abc-123' },
+        args: [{ traceId: 'abc-123' }],
       }),
     );
+    const call = invoke.mock.calls[0]![0];
+    expect(call).not.toHaveProperty('metadata');
   });
 
   test('per-call metadata on params route as second argument', async () => {
     const invoke = vi.fn(() => 'result');
 
-    const client = createClient<typeof metaDefinition>(metaDefinition, { invoke });
+    const client = createClient<typeof metaDefinition>({ invoke });
 
     await client.invoke.withParams('bob', { tenant: 'acme' });
 
@@ -411,7 +399,7 @@ describe('metadata', () => {
   test('calling without metadata passes undefined metadata', async () => {
     const invoke = vi.fn((_call: any) => 'result');
 
-    const client = createClient<typeof metaDefinition>(metaDefinition, { invoke });
+    const client = createClient<typeof metaDefinition>({ invoke });
 
     await client.invoke.noParams();
     await client.invoke.withParams('eve');
@@ -425,14 +413,15 @@ describe('metadata', () => {
   test('non-object per-call arg is not treated as metadata', async () => {
     const invoke = vi.fn((_call: any) => 'result');
 
-    const client = createClient<typeof metaDefinition>(metaDefinition, { invoke });
+    const client = createClient<typeof metaDefinition>({ invoke });
 
-    // On a no-params route, passing a string should NOT be metadata
-    await client.invoke.noParams('not-an-object' as any);
+    await (client.invoke.noParams as unknown as (value: unknown) => Promise<unknown>)(
+      'not-an-object',
+    );
 
     expect(invoke).toHaveBeenCalledWith(
       expect.objectContaining({
-        args: [],
+        args: ['not-an-object'],
       }),
     );
     expect(invoke.mock.calls[0][0]).not.toHaveProperty('metadata');
@@ -441,7 +430,7 @@ describe('metadata', () => {
   test('async onMetadata hook is supported', async () => {
     const invoke = vi.fn(() => 'result');
 
-    const client = createClient<typeof metaDefinition>(metaDefinition, {
+    const client = createClient<typeof metaDefinition>({
       invoke,
       onMetadata: async call => {
         await Promise.resolve();

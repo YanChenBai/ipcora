@@ -46,7 +46,7 @@
   },
   "scripts": {
     "build": "vp pack",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "vp check --no-fmt --no-lint",
     "dev": "vp pack --watch",
     "test": "vp test",
     "check": "vp check",
@@ -56,8 +56,8 @@
     "@standard-schema/spec": "catalog:"
   },
   "devDependencies": {
-    "arktype": "catalog:",
     "@types/node": "catalog:",
+    "arktype": "catalog:",
     "bumpp": "catalog:",
     "typescript": "catalog:",
     "vite-plus": "catalog:",

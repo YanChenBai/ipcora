@@ -17,7 +17,7 @@ export default defineConfig({
     typecheck: {
       enabled: true,
     },
-    include: ['./tests/**/*.test.ts'],
+    include: ['./tests/**/*.test.ts', './tests/**/*.test-d.ts'],
   },
   lint: {
     options: {

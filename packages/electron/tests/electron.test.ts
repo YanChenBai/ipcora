@@ -1,11 +1,42 @@
+import type { BrowserWindow } from 'electron';
+import type { StandardSchemaV1 } from 'ipcora';
+import { defineEventSchema } from 'ipcora/event';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
+const electronHandlers = vi.hoisted(
+  () => new Map<string, (event: unknown, request: unknown) => unknown>(),
+);
+
+vi.mock('electron', () => ({
+  BrowserWindow: {
+    fromWebContents: vi.fn(),
+  },
+  contextBridge: {
+    exposeInMainWorld: vi.fn(),
+  },
+  ipcMain: {
+    handle: vi.fn((channel: string, handler: (event: unknown, request: unknown) => unknown) => {
+      electronHandlers.set(channel, handler);
+    }),
+    listenerCount: vi.fn((channel: string) => (electronHandlers.has(channel) ? 1 : 0)),
+    removeHandler: vi.fn((channel: string) => {
+      electronHandlers.delete(channel);
+    }),
+  },
+  ipcRenderer: {
+    invoke: vi.fn(),
+    on: vi.fn(),
+    removeListener: vi.fn(),
+  },
+}));
+
 import {
-  bindBrowserWindow,
   createElectronAdapter,
   createBrowserWindowPeer,
   createElectronIpcora,
+  ELECTRON_IPCORA_CHANNEL,
 } from '../src/main';
+import type { BoundBrowserWindow, ElectronIpcora } from '../src/main';
 import { createIpcoraClient } from '../src/renderer';
 
 // -----------------------------------------------------------------------------
@@ -30,8 +61,19 @@ function createIpcMain() {
 
 function createWindow(id = 1) {
   return {
+    id,
     webContents: { id, send: vi.fn() },
     once: vi.fn(),
+  };
+}
+
+function schema<TOutput>(): StandardSchemaV1<unknown, TOutput> {
+  return {
+    '~standard': {
+      version: 1,
+      vendor: 'test',
+      validate: (value: unknown) => ({ value: value as TOutput }),
+    },
   };
 }
 
@@ -40,6 +82,10 @@ function createWindow(id = 1) {
 // -----------------------------------------------------------------------------
 
 describe('@ipcora/electron/main', () => {
+  beforeEach(() => {
+    electronHandlers.clear();
+  });
+
   test('adapts ipcMain to an ipcora adapter', async () => {
     const { handlers, ipcMain } = createIpcMain();
     const adapter = createElectronAdapter(ipcMain as never);
@@ -72,20 +118,65 @@ describe('@ipcora/electron/main', () => {
     expect(window.once).toHaveBeenCalledWith('closed', dispose);
   });
 
-  test('binds BrowserWindow peers to an ipcora instance', async () => {
-    const { handlers, ipcMain } = createIpcMain();
-    const ipcora = createElectronIpcora<{ tenant: string }>({
-      channel: 'test:electron',
-      ipcMain: ipcMain as never,
-    }).handler('ping', ({ tenant }) => tenant);
+  test('creates electron ipcora with the fixed channel', () => {
+    const ipcora = createElectronIpcora();
 
-    bindBrowserWindow(ipcora, createWindow(1) as never, { context: { tenant: 'acme' } });
+    expect(ipcora.channel).toBe(ELECTRON_IPCORA_CHANNEL);
+  });
+
+  test('binds BrowserWindow peers to an electron ipcora instance by window id', async () => {
+    const ipcora = createElectronIpcora<{ tenant: string }>().handler(
+      'ping',
+      ({ tenant }) => tenant,
+    );
+
+    (ipcora as unknown as ElectronIpcora<{ tenant: string }>).bind(
+      createWindow(1) as unknown as BrowserWindow,
+      {
+        context: { tenant: 'acme' },
+      },
+    );
 
     await expect(
-      handlers.get('test:electron')?.({ sender: { id: 1 } }, { id: '1', path: 'ping' }),
+      electronHandlers.get(ELECTRON_IPCORA_CHANNEL)?.(
+        { sender: { id: 1 } },
+        { id: '1', path: 'ping' },
+      ),
     ).resolves.toEqual({
       data: 'acme',
     });
+  });
+
+  test('returns a bound window emitter', async () => {
+    const ipcora = createElectronIpcora().events(
+      defineEventSchema({
+        update: schema<{ title: string }>(),
+      }),
+    );
+    const window = createWindow(5);
+    const binding = (ipcora as unknown as ElectronIpcora).bind(
+      window as unknown as BrowserWindow,
+    ) as BoundBrowserWindow<any>;
+
+    await binding.emit('update', { title: 'direct' });
+    await binding.$emit.update({ title: 'proxy' });
+
+    expect(binding.id).toBe(5);
+    expect(window.webContents.send).toHaveBeenCalledWith(
+      `${ELECTRON_IPCORA_CHANNEL}:event:update`,
+      {
+        title: 'direct',
+      },
+    );
+    expect(window.webContents.send).toHaveBeenCalledWith(
+      `${ELECTRON_IPCORA_CHANNEL}:event:update`,
+      {
+        title: 'proxy',
+      },
+    );
+
+    binding.unbind();
+    expect(window.once.mock.calls[0][0]).toBe('closed');
   });
 });
 
@@ -106,8 +197,8 @@ describe('@ipcora/electron/preload', () => {
 
     vi.doMock('electron', () => ({
       contextBridge: {
-        exposeInMainWorld: vi.fn((apiKey: string, api: unknown) => {
-          exposed[apiKey] = api;
+        exposeInMainWorld: vi.fn((key: string, api: unknown) => {
+          exposed[key] = api;
         }),
       },
       ipcRenderer: {
@@ -119,7 +210,7 @@ describe('@ipcora/electron/preload', () => {
 
     // Dynamic import to pick up the mock
     const { exposeIpcoraBridge: bridgeFn } = await import('../src/preload');
-    bridgeFn({ channel: 'app:ipc' });
+    bridgeFn();
 
     const bridge = exposed.__IPCORA__ as {
       invoke: (req: unknown) => Promise<unknown>;
@@ -128,7 +219,10 @@ describe('@ipcora/electron/preload', () => {
 
     // invoke
     const invokeResult = bridge.invoke({ id: 'r1', path: 'ping' });
-    expect(ipcRendererInvoke).toHaveBeenCalledWith('app:ipc', { id: 'r1', path: 'ping' });
+    expect(ipcRendererInvoke).toHaveBeenCalledWith(ELECTRON_IPCORA_CHANNEL, {
+      id: 'r1',
+      path: 'ping',
+    });
     await expect(invokeResult).resolves.toEqual({ data: 'ok' });
 
     // subscribe
@@ -144,28 +238,6 @@ describe('@ipcora/electron/preload', () => {
     // unsubscribe
     unsub();
     expect(ipcRendererRemove).toHaveBeenCalledWith('app:ipc:event:update', expect.any(Function));
-  });
-
-  test('supports custom apiKey', async () => {
-    const exposed: Record<string, unknown> = {};
-    vi.doMock('electron', () => ({
-      contextBridge: {
-        exposeInMainWorld: vi.fn((apiKey: string, api: unknown) => {
-          exposed[apiKey] = api;
-        }),
-      },
-      ipcRenderer: {
-        invoke: vi.fn(),
-        on: vi.fn(),
-        removeListener: vi.fn(),
-      },
-    }));
-
-    const { exposeIpcoraBridge: bridgeFn } = await import('../src/preload');
-    bridgeFn({ channel: 'my-app', apiKey: 'MY_API' });
-
-    expect(exposed).toHaveProperty('MY_API');
-    expect(exposed.__IPCORA__).toBeUndefined();
   });
 });
 
@@ -186,12 +258,12 @@ describe('@ipcora/electron/renderer', () => {
       },
     });
 
-    // Minimal definition object (used only for type inference)
+    // Minimal definition type (used only for type inference)
     const definition = {
       ping: (() => {}) as unknown as () => Promise<{ data: string; error: null }>,
     };
 
-    const client = createIpcoraClient<typeof definition>(definition);
+    const client = createIpcoraClient<typeof definition>();
 
     const result = await client.invoke.ping();
     expect(result).toEqual({ data: 'pong', error: null });
@@ -214,14 +286,14 @@ describe('@ipcora/electron/renderer', () => {
       },
     });
 
-    // Definition with params (arity > 0)
+    // Definition type with params
     const definition = {
       getUser: ((_params: { id: string }) => {}) as unknown as (params: {
         id: string;
       }) => Promise<{ data: { id: string }; error: null }>,
     };
 
-    const client = createIpcoraClient<typeof definition>(definition);
+    const client = createIpcoraClient<typeof definition>();
 
     await client.invoke.getUser({ id: '42' });
     expect(invokeMock).toHaveBeenCalledWith({
@@ -235,11 +307,7 @@ describe('@ipcora/electron/renderer', () => {
   test('throws when bridge is not exposed', () => {
     vi.stubGlobal('window', {});
 
-    const definition = { test: () => {} };
-
-    expect(() => createIpcoraClient(definition)).toThrow(
-      /Ipcora bridge not found at window\.__IPCORA__/,
-    );
+    expect(() => createIpcoraClient()).toThrow(/Ipcora bridge not found at window\.__IPCORA__/);
   });
 
   test('passes static metadata from options', async () => {
@@ -255,7 +323,7 @@ describe('@ipcora/electron/renderer', () => {
       ping: (() => {}) as unknown as () => Promise<{ data: string; error: null }>,
     };
 
-    const client = createIpcoraClient<typeof definition>(definition, {
+    const client = createIpcoraClient<typeof definition>({
       metadata: { traceId: 't-123' },
     });
 

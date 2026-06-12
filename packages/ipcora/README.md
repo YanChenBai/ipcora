@@ -499,7 +499,7 @@ Install and import from `ipcora/client`:
 import { createClient, type InferDefinition } from 'ipcora/client';
 
 type Def = InferDefinition<typeof ipc>;
-const client = createClient<Def>(ipc.definition, {
+const client = createClient<Def>({
   invoke(call) {
     // call.channel — dotted path like "user.get"
     // call.args    — params array
@@ -527,14 +527,14 @@ const unsub = client.event.onUserLogin(({ userId, at }) => {
 
 ### Client Types
 
-| Export                       | Description                                         |
-| ---------------------------- | --------------------------------------------------- |
-| `createClient<T>(def, opts)` | Factory function                                    |
-| `Client<T>`                  | `{ invoke, event }` typed proxy                     |
-| `InferDefinition<T>`         | Extract route & event types from an Ipcora instance |
-| `CreateClientOptions`        | Options type for `createClient`                     |
-| `ClientCall`                 | Shape passed to `invoke` adapter                    |
-| `ClientSubscription`         | Shape passed to `subscribe` adapter                 |
+| Export                  | Description                                         |
+| ----------------------- | --------------------------------------------------- |
+| `createClient<T>(opts)` | Factory function                                    |
+| `Client<T>`             | `{ invoke, event }` typed proxy                     |
+| `InferDefinition<T>`    | Extract route & event types from an Ipcora instance |
+| `CreateClientOptions`   | Options type for `createClient`                     |
+| `ClientCall`            | Shape passed to `invoke` adapter                    |
+| `ClientSubscription`    | Shape passed to `subscribe` adapter                 |
 
 ## Custom Adapter
 

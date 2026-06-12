@@ -1,7 +1,6 @@
 import type { EventDefinition } from './types';
 
 type AnyFunction = (...args: any[]) => any;
-type NoInferType<T> = [T][T extends any ? 0 : never];
 type Expand<T> = { [K in keyof T]: T[K] } & {};
 export type InferDefinition<T extends { readonly definition: object }> = T['definition'];
 type ResultOf<T> =
@@ -25,7 +24,7 @@ type EventDefinitionLike<TPayload = unknown> = EventDefinition<string, TPayload>
 
 export type InvokeClient<T> = T extends AnyFunction
   ? Parameters<T> extends []
-    ? (metadata?: ClientMetadata) => Promise<ResultOf<ReturnType<T>>>
+    ? () => Promise<ResultOf<ReturnType<T>>>
     : (...args: [...Parameters<T>, metadata?: ClientMetadata]) => Promise<ResultOf<ReturnType<T>>>
   : T extends EventDefinitionLike
     ? never
@@ -37,11 +36,13 @@ export type InvokeClient<T> = T extends AnyFunction
 
 export type EventClient<T> = T extends object
   ? {
-      [K in keyof T as T[K] extends EventDefinitionLike ? K : never]: T[K] extends {
-        readonly payload: infer TPayload;
-      }
-        ? EventSubscriber<TPayload>
-        : never;
+      [K in keyof T]: T[K] extends EventDefinitionLike
+        ? T[K] extends { readonly payload: infer TPayload }
+          ? EventSubscriber<TPayload>
+          : never
+        : T[K] extends object
+          ? EventClient<T[K]>
+          : never;
     }
   : never;
 
@@ -99,6 +100,14 @@ export interface CreateClientOptions {
   invoke(call: ClientCall): unknown | Promise<unknown>;
   subscribe?(call: ClientSubscription): Unsubscribe;
 
+  /**
+   * IPC channel prefix used to compute event subscription channels.
+   * Must match the `channel` passed to the server-side `createIpcora({ channel })`.
+   *
+   * @default 'ipcora:invoke'
+   */
+  channel?: string;
+
   /** Static metadata merged into every call (lowest priority). */
   metadata?: Record<string, unknown>;
 
@@ -114,27 +123,24 @@ export interface ClientSubscription {
 }
 
 export function createClient<TDefinition extends object = never>(
-  definition: NoInferType<TDefinition>,
   options: CreateClientOptions,
 ): Client<TDefinition> {
   return {
     invoke: createInvokeProxy({
-      node: definition,
       path: [],
       invoke: options.invoke,
       staticMetadata: options.metadata,
       onMetadata: options.onMetadata,
     }),
     event: createEventProxy({
-      node: definition,
       path: [],
       subscribe: options.subscribe,
+      channel: options.channel ?? 'ipcora:invoke',
     }),
   } as Client<TDefinition>;
 }
 
 interface InvokeProxyContext {
-  node: unknown;
   path: string[];
   invoke: CreateClientOptions['invoke'];
   staticMetadata?: Record<string, unknown>;
@@ -142,9 +148,9 @@ interface InvokeProxyContext {
 }
 
 interface EventProxyContext {
-  node: unknown;
   path: string[];
   subscribe?: CreateClientOptions['subscribe'];
+  channel: string;
 }
 
 function createInvokeProxy(context: InvokeProxyContext): unknown {
@@ -172,22 +178,7 @@ function createInvokeProxy(context: InvokeProxyContext): unknown {
         return undefined;
       }
 
-      if (!isNamespaceNode(context.node)) {
-        throw new TypeError(`"${formatPath(context.path)}" is not a namespace`);
-      }
-
-      if (!(property in context.node)) {
-        throw new TypeError(`Unknown client path: "${formatPath([...context.path, property])}"`);
-      }
-
-      const childNode = Reflect.get(context.node, property);
-
-      if (isEventDefinition(childNode)) {
-        throw new TypeError(`"${formatPath([...context.path, property])}" is an IPC event`);
-      }
-
       return createInvokeProxy({
-        node: childNode,
         path: [...context.path, property],
         invoke: context.invoke,
         staticMetadata: context.staticMetadata,
@@ -200,36 +191,18 @@ function createInvokeProxy(context: InvokeProxyContext): unknown {
         throw new TypeError('The root client cannot be called directly');
       }
 
-      if (typeof context.node !== 'function') {
-        throw new TypeError(`"${formatPath(context.path)}" is a namespace and cannot be called`);
-      }
-
       const method = context.path.at(-1)!;
       const namespace = context.path.slice(0, -1).join('.');
       const channel = context.path.join('.');
 
-      // Determine whether this route expects params by checking
-      // the placeholder function's arity (set by Ipcora.assignRouteDefinition).
-      const hasParams = (context.node as Function).length > 0;
-
       let callArgs: unknown[];
       let perCallMetadata: Record<string, unknown> | undefined;
 
-      if (hasParams) {
-        // (params, metadata?)
-        callArgs = args.length > 0 ? [args[0]] : [undefined];
-        perCallMetadata =
-          args.length > 1 && isPlainObject(args[1])
-            ? (args[1] as Record<string, unknown>)
-            : undefined;
-      } else {
-        // (metadata?)
-        callArgs = [];
-        perCallMetadata =
-          args.length > 0 && isPlainObject(args[0])
-            ? (args[0] as Record<string, unknown>)
-            : undefined;
-      }
+      perCallMetadata =
+        args.length > 1 && isPlainObject(args.at(-1))
+          ? (args.at(-1) as Record<string, unknown>)
+          : undefined;
+      callArgs = perCallMetadata ? args.slice(0, -1) : [...args];
 
       const call: ClientCall = {
         path: [...context.path],
@@ -250,16 +223,18 @@ function createInvokeProxy(context: InvokeProxyContext): unknown {
 }
 
 function createEventSubscriber(
-  definition: EventDefinitionLike,
+  eventMethod: string,
   subscribe: CreateClientOptions['subscribe'],
+  ipcChannel: string,
 ): (listener: (payload: unknown) => void) => Unsubscribe {
   return listener => {
     if (!subscribe) {
       throw new TypeError('Client subscribe adapter is required for IPC events');
     }
 
+    const { event, channel, once } = parseEventMethod(eventMethod, ipcChannel);
     let unsubscribe: Unsubscribe = () => {};
-    const wrappedListener = definition.once
+    const wrappedListener = once
       ? (payload: unknown) => {
           unsubscribe();
           listener(payload);
@@ -267,9 +242,9 @@ function createEventSubscriber(
       : listener;
 
     unsubscribe = subscribe({
-      event: definition.name,
-      channel: definition.channel,
-      once: definition.once,
+      event,
+      channel,
+      once,
       listener: wrappedListener,
     });
     return unsubscribe;
@@ -293,24 +268,15 @@ function createEventProxy(context: EventProxyContext): unknown {
         return undefined;
       }
 
-      if (!isNamespaceNode(context.node)) {
-        throw new TypeError(`"${formatPath(context.path)}" is not an event namespace`);
-      }
-
-      if (!(property in context.node)) {
-        throw new TypeError(`Unknown event path: "${formatPath([...context.path, property])}"`);
-      }
-
-      const childNode = Reflect.get(context.node, property);
-
-      if (isEventDefinition(childNode)) {
-        return createEventSubscriber(childNode, context.subscribe);
+      const path = [...context.path, property];
+      if (isEventMethod(property)) {
+        return createEventSubscriber(path.join('.'), context.subscribe, context.channel);
       }
 
       return createEventProxy({
-        node: childNode,
-        path: [...context.path, property],
+        path,
         subscribe: context.subscribe,
+        channel: context.channel,
       });
     },
 
@@ -322,12 +288,31 @@ function createEventProxy(context: EventProxyContext): unknown {
   });
 }
 
-function isEventDefinition(value: unknown): value is EventDefinitionLike {
-  return (
-    value !== null &&
-    typeof value === 'function' &&
-    (value as { __ipcoraEvent?: unknown }).__ipcoraEvent === true
-  );
+function isEventMethod(value: string): boolean {
+  return /^on(?:Once)?[A-Z]/.test(value);
+}
+
+function parseEventMethod(
+  eventMethod: string,
+  ipcChannel: string,
+): {
+  event: string;
+  channel: string;
+  once: boolean;
+} {
+  const segments = eventMethod.split('.');
+  const method = segments.at(-1)!;
+  const once = method.startsWith('onOnce');
+  const prefixLength = once ? 'onOnce'.length : 'on'.length;
+  const eventName = uncapitalize(method.slice(prefixLength));
+  const namespace = segments.slice(0, -1).join('.');
+  const event = namespace ? `${namespace}.${eventName}` : eventName;
+
+  return {
+    event,
+    channel: `${ipcChannel}:event:${event}`,
+    once,
+  };
 }
 
 function normalizeResult(value: unknown): { data: unknown; error: unknown } {
@@ -352,12 +337,12 @@ function isResult(value: unknown): value is { data: unknown; error: unknown } {
   return value !== null && typeof value === 'object' && 'data' in value && 'error' in value;
 }
 
-function isNamespaceNode(value: unknown): value is Record<PropertyKey, unknown> {
-  return value !== null && typeof value === 'object';
-}
-
 function formatPath(path: string[]): string {
   return path.length > 0 ? path.join('.') : '<root>';
+}
+
+function uncapitalize(value: string): string {
+  return value.length > 0 ? `${value[0]!.toLowerCase()}${value.slice(1)}` : value;
 }
 
 async function resolveMetadata(

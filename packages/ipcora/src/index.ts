@@ -1,5 +1,6 @@
 export { fail, IpcError } from './errors';
 export { createIpcora, Ipcora } from './router';
+export type { AnyIpcora } from './router';
 
 export type {
   AnySchema,
@@ -28,6 +29,8 @@ export type {
   EventPayloadByName,
   EventSchema,
   EventSchemaInput,
+  ExtractEvents,
+  ExtractHandlers,
   IpcAdapter,
   IpcSender,
   JoinPathType,
@@ -47,6 +50,7 @@ export type {
   ResolveHook,
   RuntimeContext,
   PathToObject,
+  PrefixedEventDefinitions,
   RouteHandler,
   StandardSchemaV1,
 } from './types';

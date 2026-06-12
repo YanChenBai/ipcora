@@ -41,7 +41,7 @@ ipc.bind({ id: 1, sender: { id: 1 } }, { context: { tenant: 'acme' } });
 
 // 3. Create a typed client
 type Def = InferDefinition<typeof ipc>;
-const client = createClient<Def>(ipc.definition, { invoke });
+const client = createClient<Def>({ invoke });
 const result = await client.invoke.user.get({ id: '1' });
 //    ^ { data: { name: string } | null; error: { name: string; message: string } | null }
 ```
@@ -52,12 +52,8 @@ const result = await client.invoke.user.get({ id: '1' });
 
 ```ts
 import { createElectronIpcora } from '@ipcora/electron';
-import { ipcMain } from 'electron';
 
-export const ipc = createElectronIpcora({ channel: 'app:ipc', ipcMain }).handler(
-  'ping',
-  () => 'pong',
-);
+export const ipc = createElectronIpcora().handler('ping', () => 'pong');
 
 export type AppIpcora = typeof ipc;
 ```
@@ -66,20 +62,20 @@ export type AppIpcora = typeof ipc;
 
 ```ts
 import { BrowserWindow } from 'electron';
-import { bindBrowserWindow } from '@ipcora/electron';
 import { ipc } from './ipc';
 
 const win = new BrowserWindow({
   webPreferences: { preload: path.join(__dirname, '../preload/index.js') },
 });
-bindBrowserWindow(ipc, win, { context: {} });
+const binding = ipc.bind(win);
+// binding.emit(...) sends typed events to this window.
 ```
 
 **preload script** — expose the bridge:
 
 ```ts
 import { exposeIpcoraBridge } from '@ipcora/electron/preload';
-exposeIpcoraBridge({ channel: 'app:ipc' });
+exposeIpcoraBridge();
 ```
 
 **renderer** — call handlers with full type safety:
@@ -88,7 +84,7 @@ exposeIpcoraBridge({ channel: 'app:ipc' });
 import { createIpcoraClient, type InferDefinition } from '@ipcora/electron/renderer';
 import type { AppIpcora } from '../main/ipc';
 
-const client = createIpcoraClient<InferDefinition<AppIpcora>>({});
+const client = createIpcoraClient<InferDefinition<AppIpcora>>();
 const result = await client.invoke.ping();
 //    ^ { data: "pong"; error: null }
 ```

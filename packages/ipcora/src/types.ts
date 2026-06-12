@@ -182,18 +182,77 @@ export type EventDefinitions<TEvents extends EventSchema> = Expand<
     >;
   }
 >;
+
+/**
+ * Like {@link EventDefinitions} but prepends a dot-separated path prefix to
+ * each event name. Used by the `events(path, schema)` overload so that the
+ * definition tree mirrors the namespace path and the stored event name
+ * includes the prefix (e.g. `"user.login"` instead of `"login"`).
+ */
+export type PrefixedEventDefinitions<TPath extends string, TEvents extends EventSchema> = Expand<
+  {
+    [K in keyof TEvents & string as `on${Capitalize<K>}`]: EventDefinition<
+      `${TPath}.${K}`,
+      EventPayload<TEvents[K]>
+    >;
+  } & {
+    [K in keyof TEvents & string as `onOnce${Capitalize<K>}`]: EventDefinition<
+      `${TPath}.${K}`,
+      EventPayload<TEvents[K]>
+    >;
+  }
+>;
+/**
+ * Recursively extract only EventDefinition-bearing branches from a merged
+ * definition tree. Handler branches are stripped. Empty intermediate objects
+ * that remain after filtering children are preserved so the tree shape
+ * stays navigable for namespaced events.
+ */
+export type ExtractEvents<T> = T extends object
+  ? Expand<
+      {
+        [K in keyof T as T[K] extends EventDefinition<string, any> ? K : never]: T[K];
+      } & {
+        [K in keyof T as T[K] extends EventDefinition<string, any>
+          ? never
+          : T[K] extends object
+            ? K
+            : never]: ExtractEvents<T[K]>;
+      }
+    >
+  : never;
+
+/**
+ * Recursively extract only handler branches from a merged definition tree.
+ * EventDefinition leaves are stripped. Handler functions are preserved as-is
+ * and intermediate objects are recursed into.
+ */
+export type ExtractHandlers<T> = T extends object
+  ? Expand<{
+      [K in keyof T as T[K] extends EventDefinition<string, any>
+        ? never
+        : K]: T[K] extends object
+        ? ExtractHandlers<T[K]>
+        : T[K];
+    }>
+  : T;
+
 export type EventNames<TDefinition> = TDefinition extends object
   ? {
       [K in keyof TDefinition]: TDefinition[K] extends EventDefinition<infer TName, any>
         ? TName
-        : never;
+        : TDefinition[K] extends object
+          ? EventNames<TDefinition[K]>
+          : never;
     }[keyof TDefinition]
   : never;
 export type EventPayloadByName<TDefinition, TName extends string> = TDefinition extends object
   ? {
       [K in keyof TDefinition]: TDefinition[K] extends EventDefinition<TName, infer TPayload>
         ? TPayload
-        : never;
+        : TDefinition[K] extends object
+          ? EventPayloadByName<TDefinition[K], TName>
+          : never;
     }[keyof TDefinition]
   : never;
 export interface EventEmitOptions {

@@ -2,12 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { IpcRendererEvent } from 'electron';
 import type { IpcRequest, IpcResponse } from 'ipcora';
 
-export interface ExposeIpcoraBridgeOptions {
-  /** The ipcora channel name (must match what the main process uses). */
-  channel: string;
-  /** Key on `window` to expose the bridge. @default "__IPCORA__" */
-  apiKey?: string;
-}
+import { ELECTRON_IPCORA_CHANNEL } from './constants';
 
 export interface IpcoraBridge {
   invoke(request: IpcRequest): Promise<IpcResponse>;
@@ -28,16 +23,13 @@ declare global {
  * ```ts
  * // preload.ts
  * import { exposeIpcoraBridge } from "@ipcora/electron/preload";
- * exposeIpcoraBridge({ channel: "app:ipc" });
+ * exposeIpcoraBridge();
  * ```
  */
-export function exposeIpcoraBridge(options: ExposeIpcoraBridgeOptions): void {
-  const apiKey = options.apiKey ?? '__IPCORA__';
-  const channel = options.channel;
-
-  contextBridge.exposeInMainWorld(apiKey, {
+export function exposeIpcoraBridge(): void {
+  contextBridge.exposeInMainWorld('__IPCORA__', {
     invoke(request: IpcRequest): Promise<IpcResponse> {
-      return ipcRenderer.invoke(channel, request);
+      return ipcRenderer.invoke(ELECTRON_IPCORA_CHANNEL, request);
     },
     subscribe(eventChannel: string, listener: (payload: unknown) => void): () => void {
       const handler = (_event: IpcRendererEvent, payload: unknown) => {

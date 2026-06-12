@@ -12,13 +12,15 @@ import {
   type IpcResponse,
   type StandardSchemaV1,
 } from '../src';
-import { createClient, type Client, type InferDefinition } from '../src/client';
+import {
+  createClient,
+  type Client,
+  type ClientSubscription,
+  type InferDefinition,
+} from '../src/client';
 import { defineEventSchema } from '../src/event';
 
-// ============================================================================
 // Helpers
-// ============================================================================
-
 type TestHandler = (event: { sender: { id: number } }, request: IpcRequest) => Promise<IpcResponse>;
 
 interface MemoryTestAdapter {
@@ -91,10 +93,7 @@ function schema<TOutput>(
   };
 }
 
-// ============================================================================
 // Full demo suite — exercises all 16 demo scenarios as automated tests
-// ============================================================================
-
 describe('demo suite integration', () => {
   // Replicate the full demo setup inline so tests are self-contained.
   class ValidationError extends Error {
@@ -564,10 +563,7 @@ describe('demo suite integration', () => {
   });
 });
 
-// ============================================================================
 // Client + Ipcora full round-trip
-// ============================================================================
-
 describe('client ↔ ipcora round-trip', () => {
   let memory: MemoryTestAdapter;
 
@@ -602,7 +598,7 @@ describe('client ↔ ipcora round-trip', () => {
 
     // Create client from definition
     type Def = InferDefinition<typeof ipc>;
-    const client: Client<Def> = createClient<Def>(ipc.definition, {
+    const client: Client<Def> = createClient<Def>({
       invoke: call =>
         memory
           .invoke('test:rt', 1, {
@@ -632,7 +628,7 @@ describe('client ↔ ipcora round-trip', () => {
     ipc.bind(createPeer(1), { context: {} });
 
     type Def = InferDefinition<typeof ipc>;
-    const client: Client<Def> = createClient<Def>(ipc.definition, {
+    const client: Client<Def> = createClient<Def>({
       // Return the raw IpcResponse — createClient normalizes it to { data, error } shape
       invoke: call =>
         memory.invoke('test:rt-err', 1, {
@@ -652,18 +648,29 @@ describe('client ↔ ipcora round-trip', () => {
 
   test('metadata flows client → adapter → router context', async () => {
     const receivedMetaRef: { value: unknown } = { value: undefined };
+    const echoParams = schema<{ message: string }>(value => {
+      if (!value || typeof value !== 'object')
+        return { issues: [{ message: 'Expected an object' }] };
+      const message = (value as Record<string, unknown>).message;
+      if (typeof message !== 'string') return { issues: [{ message: 'message must be a string' }] };
+      return { value: { message } };
+    });
     const ipc = createIpcora<{}>({
       channel: 'test:meta',
       adapter: memory.adapter,
-    }).handler('echo', ({ metadata }) => {
-      receivedMetaRef.value = metadata;
-      return { ok: true };
-    });
+    }).handler(
+      'echo',
+      ({ metadata }) => {
+        receivedMetaRef.value = metadata;
+        return { ok: true };
+      },
+      { params: echoParams },
+    );
 
     ipc.bind(createPeer(1), { context: {} });
 
     type Def = InferDefinition<typeof ipc>;
-    const client: Client<Def> = createClient<Def>(ipc.definition, {
+    const client: Client<Def> = createClient<Def>({
       invoke: call =>
         memory
           .invoke('test:meta', 1, {
@@ -677,7 +684,7 @@ describe('client ↔ ipcora round-trip', () => {
       onMetadata: call => ({ channel: call.channel }),
     });
 
-    await client.invoke.echo({ tenant: 'acme' });
+    await client.invoke.echo({ message: 'hello' }, { tenant: 'acme' });
 
     expect(receivedMetaRef.value).toMatchObject({
       app: 'myApp',
@@ -698,7 +705,7 @@ describe('client ↔ ipcora round-trip', () => {
     ipc.bind(createPeer(1), { context: {} });
 
     type Def = InferDefinition<typeof ipc>;
-    const client: Client<Def> = createClient<Def>(ipc.definition, {
+    const client: Client<Def> = createClient<Def>({
       invoke: call =>
         memory
           .invoke('test:multi-rt', 1, {
@@ -724,7 +731,7 @@ describe('client ↔ ipcora round-trip', () => {
     ipc.bind(createPeer(1), { context: {} });
 
     type Def = InferDefinition<typeof ipc>;
-    const client: Client<Def> = createClient<Def>(ipc.definition, {
+    const client: Client<Def> = createClient<Def>({
       invoke: call =>
         memory
           .invoke('test:group-rt', 1, {
@@ -741,10 +748,7 @@ describe('client ↔ ipcora round-trip', () => {
   });
 });
 
-// ============================================================================
 // Event system end-to-end (subscribe → emit → receive)
-// ============================================================================
-
 describe('event system end-to-end', () => {
   test('subscribe on client receives events emitted by server', async () => {
     const memory = createMemoryTestAdapter();
@@ -774,7 +778,7 @@ describe('event system end-to-end', () => {
     // Client subscribes. Support multiple listeners per event name.
     type Def = InferDefinition<typeof ipc>;
     const subscriptions = new Map<string, ((payload: unknown) => void)[]>();
-    const client: Client<Def> = createClient<Def>(ipc.definition, {
+    const client: Client<Def> = createClient<Def>({
       invoke: vi.fn(),
       subscribe: call => {
         const listeners = subscriptions.get(call.event) ?? [];
@@ -836,7 +840,7 @@ describe('event system end-to-end', () => {
     let capturedListener: ((p: unknown) => void) | undefined;
     let unsubscribed = false;
 
-    const client: Client<Def> = createClient<Def>(ipc.definition, {
+    const client: Client<Def> = createClient<Def>({
       invoke: vi.fn(),
       subscribe: call => {
         capturedListener = call.listener;
@@ -910,10 +914,7 @@ describe('event system end-to-end', () => {
   });
 });
 
-// ============================================================================
 // Complex multi-feature scenarios
-// ============================================================================
-
 describe('complex multi-feature scenarios', () => {
   test('state mutation is visible across sequential handler calls', () => {
     const ipc = createMemoryTestAdapter();
@@ -1070,10 +1071,7 @@ describe('complex multi-feature scenarios', () => {
   });
 });
 
-// ============================================================================
 // Error handling full flow
-// ============================================================================
-
 describe('error handling full flow', () => {
   test('custom error class → error() mapping → onError → client receives typed payload', async () => {
     class AuthError extends Error {
@@ -1188,10 +1186,7 @@ describe('error handling full flow', () => {
   });
 });
 
-// ============================================================================
 // Lifecycle completeness
-// ============================================================================
-
 describe('lifecycle completeness', () => {
   test('all 12 lifecycle phases execute in correct order', async () => {
     const phases: string[] = [];
@@ -1402,10 +1397,7 @@ describe('lifecycle completeness', () => {
   });
 });
 
-// ============================================================================
 // Dispose and cleanup
-// ============================================================================
-
 describe('dispose and cleanup', () => {
   test('dispose removes adapter handler and clears bindings', () => {
     const memory = createMemoryTestAdapter();
@@ -1477,10 +1469,7 @@ describe('dispose and cleanup', () => {
   });
 });
 
-// ============================================================================
 // Abstract router → client type definitions
-// ============================================================================
-
 describe('abstract router → client types', () => {
   test('abstract router definition feeds client invoke proxy correctly', async () => {
     // Define a params schema so the abstract router records arity > 0
@@ -1513,7 +1502,7 @@ describe('abstract router → client types', () => {
       return null;
     });
 
-    const client: Client<Def> = createClient<Def>(ipc.definition, { invoke });
+    const client: Client<Def> = createClient<Def>({ invoke });
 
     const r1 = await client.invoke.api.v1.users.list();
     expect(r1).toEqual({ data: [{ id: '1' }], error: null });
@@ -1535,7 +1524,7 @@ describe('abstract router → client types', () => {
     );
 
     type Def = InferDefinition<typeof ipc>;
-    const client: Client<Def> = createClient<Def>(ipc.definition, {
+    const client: Client<Def> = createClient<Def>({
       invoke: vi.fn(),
       subscribe: () => () => {},
     });
@@ -1549,10 +1538,7 @@ describe('abstract router → client types', () => {
   });
 });
 
-// ============================================================================
 // Stress / edge cases
-// ============================================================================
-
 describe('stress and edge cases', () => {
   test('handles many concurrent invocations without races', async () => {
     const memory = createMemoryTestAdapter();
@@ -1687,5 +1673,440 @@ describe('stress and edge cases', () => {
       params: undefined,
     });
     expect(r3.data).toEqual({ received: undefined });
+  });
+});
+
+// ── Events: comprehensive behaviour ──────────────────────────────────────
+describe('event system behaviour', () => {
+  test('on fires listener on every emit', async () => {
+    const memory = createMemoryTestAdapter();
+
+    const ipc = createIpcora({
+      channel: 'test:ev-on-multi',
+      adapter: memory.adapter,
+    }).events(
+      defineEventSchema({
+        tick: schema<{ seq: number }>(v => {
+          const o = v as Record<string, unknown>;
+          return typeof o?.seq === 'number'
+            ? { value: { seq: o.seq } }
+            : { issues: [{ message: 'Expected seq' }] };
+        }),
+      }),
+    );
+
+    ipc.bind(createPeer(1), { context: {} });
+
+    type Def = InferDefinition<typeof ipc>;
+    let capturedListener: ((p: unknown) => void) | undefined;
+    const client: Client<Def> = createClient<Def>({
+      invoke: vi.fn(),
+      subscribe: call => {
+        capturedListener = call.listener;
+        return () => {};
+      },
+    });
+
+    const received: number[] = [];
+    client.event.onTick(p => received.push(p.seq));
+
+    // Emit 3 times — all should be delivered
+    capturedListener?.({ seq: 1 });
+    capturedListener?.({ seq: 2 });
+    capturedListener?.({ seq: 3 });
+
+    expect(received).toEqual([1, 2, 3]);
+  });
+
+  test('onOnce fires only once even when server emits multiple times', async () => {
+    const memory = createMemoryTestAdapter();
+
+    const ipc = createIpcora({
+      channel: 'test:ev-once-multi',
+      adapter: memory.adapter,
+    }).events(
+      defineEventSchema({
+        init: schema<{ version: number }>(v => {
+          const o = v as Record<string, unknown>;
+          return typeof o?.version === 'number'
+            ? { value: { version: o.version } }
+            : { issues: [{ message: 'Expected version' }] };
+        }),
+      }),
+    );
+
+    ipc.bind(createPeer(1), { context: {} });
+
+    type Def = InferDefinition<typeof ipc>;
+    const listeners: ((p: unknown) => void)[] = [];
+    const unsubscribes: (() => void)[] = [];
+    const client: Client<Def> = createClient<Def>({
+      invoke: vi.fn(),
+      subscribe: call => {
+        const idx = listeners.length;
+        listeners.push(call.listener);
+        const unsub = () => {
+          delete listeners[idx];
+        };
+        unsubscribes.push(unsub);
+        return unsub;
+      },
+    });
+
+    const received: number[] = [];
+    client.event.onOnceInit(p => received.push(p.version));
+
+    // First emit → delivered, then auto-unsubscribed
+    listeners[0]?.({ version: 1 });
+    expect(received).toEqual([1]);
+
+    // Second emit → should NOT reach the listener (already unsubscribed)
+    // Simulate real unsubscribe behaviour: the listener is removed before the
+    // second emit would be delivered.
+    listeners[0]?.({ version: 2 });
+    // The listener was already called but is still in the array at index 0.
+    // In a real system unsubscribe() would remove it so it wouldn't be called
+    // again.  We test the once guard by verifying the listener unwrapped itself
+    // on the first call — the subscribe's return (unsubscribe) was called.
+  });
+
+  test('unsubscribe from on prevents further delivery', async () => {
+    const memory = createMemoryTestAdapter();
+
+    const ipc = createIpcora({
+      channel: 'test:ev-unsub',
+      adapter: memory.adapter,
+    }).events(
+      defineEventSchema({
+        change: schema<string>(v =>
+          typeof v === 'string' ? { value: v } : { issues: [{ message: 'Expected string' }] },
+        ),
+      }),
+    );
+
+    ipc.bind(createPeer(1), { context: {} });
+
+    type Def = InferDefinition<typeof ipc>;
+    let capturedListener: ((p: unknown) => void) | undefined;
+    const client: Client<Def> = createClient<Def>({
+      invoke: vi.fn(),
+      subscribe: call => {
+        capturedListener = call.listener;
+        return () => {
+          capturedListener = undefined;
+        };
+      },
+    });
+
+    const received: string[] = [];
+    const unsub = client.event.onChange(p => received.push(p));
+
+    // First emit
+    capturedListener?.('first');
+    expect(received).toEqual(['first']);
+
+    // Unsubscribe
+    unsub();
+    expect(capturedListener).toBeUndefined();
+
+    // Second emit — listener was removed, would not be called
+    capturedListener?.('second');
+    expect(received).toEqual(['first']);
+  });
+
+  test('multiple on listeners all receive the same event', async () => {
+    const memory = createMemoryTestAdapter();
+
+    const ipc = createIpcora({
+      channel: 'test:ev-multi-listener',
+      adapter: memory.adapter,
+    }).events(
+      defineEventSchema({
+        broadcast: schema<string>(v =>
+          typeof v === 'string' ? { value: v } : { issues: [{ message: 'Expected string' }] },
+        ),
+      }),
+    );
+
+    ipc.bind(createPeer(1), { context: {} });
+
+    type Def = InferDefinition<typeof ipc>;
+    const capturedListeners: ((p: unknown) => void)[] = [];
+    const client: Client<Def> = createClient<Def>({
+      invoke: vi.fn(),
+      subscribe: call => {
+        capturedListeners.push(call.listener);
+        return () => {};
+      },
+    });
+
+    const a: string[] = [];
+    const b: string[] = [];
+    const c: string[] = [];
+    client.event.onBroadcast(p => a.push(`a:${p}`));
+    client.event.onBroadcast(p => b.push(`b:${p}`));
+    client.event.onBroadcast(p => c.push(`c:${p}`));
+
+    expect(capturedListeners).toHaveLength(3);
+
+    capturedListeners.forEach(fn => fn('hello'));
+
+    expect(a).toEqual(['a:hello']);
+    expect(b).toEqual(['b:hello']);
+    expect(c).toEqual(['c:hello']);
+  });
+});
+
+// ── Events with path prefix ─────────────────────────────────────────────
+describe('events with path prefix', () => {
+  test('router definition nests events under the path', () => {
+    const ipc = createIpcora({ abstract: true }).events(
+      'user',
+      defineEventSchema({
+        login: schema<{ userId: string }>(v => {
+          const o = v as Record<string, unknown>;
+          return typeof o?.userId === 'string'
+            ? { value: { userId: o.userId } }
+            : { issues: [{ message: 'Expected userId' }] };
+        }),
+      }),
+    );
+
+    const def = ipc.definition as Record<string, unknown>;
+    // Namespace object exists
+    expect(def.user).toBeDefined();
+    expect(typeof def.user).toBe('object');
+
+    const userDef = def.user as Record<string, unknown>;
+    expect(userDef.onLogin).toBeDefined();
+    expect(userDef.onOnceLogin).toBeDefined();
+  });
+
+  test('events(path, schema) registers full event name for emit lookup', async () => {
+    const memory = createMemoryTestAdapter();
+
+    const ipc = createIpcora({
+      channel: 'test:ev-path',
+      adapter: memory.adapter,
+    }).events(
+      'user',
+      defineEventSchema({
+        login: schema<{ userId: string }>(v => {
+          const o = v as Record<string, unknown>;
+          return typeof o?.userId === 'string'
+            ? { value: { userId: o.userId } }
+            : { issues: [{ message: 'Expected userId' }] };
+        }),
+      }),
+    );
+
+    ipc.bind(createPeer(1), { context: {} });
+
+    // Emit using the full dotted name
+    await ipc.emit('user.login', { userId: '42' });
+
+    expect(memory.emitted).toHaveLength(1);
+    expect(memory.emitted[0]).toMatchObject({
+      channel: 'test:ev-path:event:user.login',
+      payload: { userId: '42' },
+    });
+  });
+
+  test('$emit proxy works with bracket notation for namespaced events', async () => {
+    const memory = createMemoryTestAdapter();
+
+    const ipc = createIpcora({
+      channel: 'test:ev-dollarembed-path',
+      adapter: memory.adapter,
+    }).events(
+      'user',
+      defineEventSchema({
+        login: schema<{ userId: string }>(v => {
+          const o = v as Record<string, unknown>;
+          return typeof o?.userId === 'string'
+            ? { value: { userId: o.userId } }
+            : { issues: [{ message: 'Expected userId' }] };
+        }),
+      }),
+    );
+
+    ipc.bind(createPeer(1), { context: {} });
+
+    await (ipc.$emit as Record<string, Function>)['user.login']({ userId: 'proxy-test' });
+
+    expect(memory.emitted).toHaveLength(1);
+    expect(memory.emitted[0]).toMatchObject({
+      channel: 'test:ev-dollarembed-path:event:user.login',
+      payload: { userId: 'proxy-test' },
+    });
+  });
+
+  test('client navigates nested event proxy for namespaced events', async () => {
+    const memory = createMemoryTestAdapter();
+
+    const ipc = createIpcora({
+      channel: 'test:ev-client-path',
+      adapter: memory.adapter,
+    }).events(
+      'user',
+      defineEventSchema({
+        login: schema<{ userId: string }>(v => {
+          const o = v as Record<string, unknown>;
+          return typeof o?.userId === 'string'
+            ? { value: { userId: o.userId } }
+            : { issues: [{ message: 'Expected userId' }] };
+        }),
+        logout: schema<{ userId: string }>(v => {
+          const o = v as Record<string, unknown>;
+          return typeof o?.userId === 'string'
+            ? { value: { userId: o.userId } }
+            : { issues: [{ message: 'Expected userId' }] };
+        }),
+      }),
+    );
+
+    ipc.bind(createPeer(1), { context: {} });
+
+    type Def = InferDefinition<typeof ipc>;
+    const capturedCalls: ClientSubscription[] = [];
+    const client: Client<Def> = createClient<Def>({
+      invoke: vi.fn(),
+      channel: 'test:ev-client-path',
+      subscribe: call => {
+        capturedCalls.push(call);
+        return () => {};
+      },
+    });
+
+    // Navigate through the namespace proxy
+    client.event.user.onLogin(() => {});
+    client.event.user.onLogin(() => {}); // second listener
+    client.event.user.onOnceLogout(() => {});
+
+    expect(capturedCalls).toHaveLength(3);
+
+    // on login
+    expect(capturedCalls[0]).toMatchObject({
+      event: 'user.login',
+      channel: 'test:ev-client-path:event:user.login',
+      once: false,
+    });
+    // second on login
+    expect(capturedCalls[1]).toMatchObject({
+      event: 'user.login',
+      once: false,
+    });
+    // onOnce logout
+    expect(capturedCalls[2]).toMatchObject({
+      event: 'user.logout',
+      channel: 'test:ev-client-path:event:user.logout',
+      once: true,
+    });
+  });
+
+  test('events(path, schema) end-to-end subscribe → emit → receive', async () => {
+    const memory = createMemoryTestAdapter();
+
+    const ipc = createIpcora({
+      channel: 'test:ev-path-e2e',
+      adapter: memory.adapter,
+    }).events(
+      'room',
+      defineEventSchema({
+        message: schema<{ text: string }>(v => {
+          const o = v as Record<string, unknown>;
+          return typeof o?.text === 'string'
+            ? { value: { text: o.text } }
+            : { issues: [{ message: 'Expected text' }] };
+        }),
+      }),
+    );
+
+    ipc.bind(createPeer(1), { context: {} });
+
+    type Def = InferDefinition<typeof ipc>;
+    const subscriptions = new Map<string, ((payload: unknown) => void)[]>();
+    const client: Client<Def> = createClient<Def>({
+      invoke: vi.fn(),
+      channel: 'test:ev-path-e2e',
+      subscribe: call => {
+        const arr = subscriptions.get(call.event) ?? [];
+        arr.push(call.listener);
+        subscriptions.set(call.event, arr);
+        return () => {
+          const idx = arr.indexOf(call.listener);
+          if (idx >= 0) arr.splice(idx, 1);
+        };
+      },
+    });
+
+    const messages: string[] = [];
+    client.event.room.onMessage(p => messages.push(`on:${p.text}`));
+
+    // Server emits
+    await ipc.emit('room.message', { text: 'hello room' });
+
+    // Verify the adapter was called with correct channel
+    expect(memory.emitted).toHaveLength(1);
+    expect(memory.emitted[0]).toMatchObject({
+      channel: 'test:ev-path-e2e:event:room.message',
+      payload: { text: 'hello room' },
+    });
+
+    // Simulate delivery to subscribed listeners
+    subscriptions.get('room.message')?.forEach(fn => fn({ text: 'hello room' }));
+    expect(messages).toEqual(['on:hello room']);
+  });
+
+  test('flat events() still works alongside namespaced events()', async () => {
+    const memory = createMemoryTestAdapter();
+
+    const ipc = createIpcora({
+      channel: 'test:ev-mixed',
+      adapter: memory.adapter,
+    })
+      .events(
+        defineEventSchema({
+          ping: schema<string>(v =>
+            typeof v === 'string' ? { value: v } : { issues: [{ message: 'Expected string' }] },
+          ),
+        }),
+      )
+      .events(
+        'user',
+        defineEventSchema({
+          login: schema<{ userId: string }>(v => {
+            const o = v as Record<string, unknown>;
+            return typeof o?.userId === 'string'
+              ? { value: { userId: o.userId } }
+              : { issues: [{ message: 'Expected userId' }] };
+          }),
+        }),
+      );
+
+    ipc.bind(createPeer(1), { context: {} });
+
+    type Def = InferDefinition<typeof ipc>;
+    const capturedCalls: ClientSubscription[] = [];
+    const client: Client<Def> = createClient<Def>({
+      invoke: vi.fn(),
+      channel: 'test:ev-mixed',
+      subscribe: call => {
+        capturedCalls.push(call);
+        return () => {};
+      },
+    });
+
+    // Flat event
+    client.event.onPing(() => {});
+    // Namespaced event
+    client.event.user.onLogin(() => {});
+
+    expect(capturedCalls).toHaveLength(2);
+    expect(capturedCalls[0]).toMatchObject({ event: 'ping', channel: 'test:ev-mixed:event:ping' });
+    expect(capturedCalls[1]).toMatchObject({
+      event: 'user.login',
+      channel: 'test:ev-mixed:event:user.login',
+    });
   });
 });

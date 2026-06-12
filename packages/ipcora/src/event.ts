@@ -10,6 +10,8 @@ export type {
   EventPayloadByName,
   EventSchema,
   EventSchemaInput,
+  ExtractEvents,
+  ExtractHandlers,
 } from './types';
 
 /**
