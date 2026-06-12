@@ -89,12 +89,10 @@ export type IpcResponse<T = unknown> =
 export type IpcErrorPayload<
   TName extends string = string,
   TData = unknown,
-  TStatus extends number = number,
 > = {
   name: TName;
   message: string;
   data?: TData;
-  status?: TStatus;
   stack?: string;
 };
 
@@ -115,18 +113,18 @@ export type ErrorMapper<
   TMapped extends IpcError = IpcError,
 > = (value: { fail: typeof fail; error: TError }) => TMapped;
 export type ErrorMapPayload<TError extends AnyErrorConstructor, TMapped> =
-  TMapped extends IpcError<infer TName, infer TData, infer TStatus>
-    ? IpcErrorPayload<TName, TData, TStatus>
-    : TMapped extends IpcErrorPayload<infer TName, infer TData, infer TStatus>
-      ? IpcErrorPayload<TName, TData, TStatus>
+  TMapped extends IpcError<infer TName, infer TData>
+    ? IpcErrorPayload<TName, TData>
+    : TMapped extends IpcErrorPayload<infer TName, infer TData>
+      ? IpcErrorPayload<TName, TData>
       : IpcErrorPayload<InstanceType<TError>['name'], undefined>;
 export type ErrorRegistryPayload<TRegistry extends ErrorRegistry> = {
   [K in keyof TRegistry]: IpcErrorPayload<K & string, undefined>;
 }[keyof TRegistry];
 export type ErrorReturnPayload<TReturn> =
   Exclude<Awaited<TReturn>, void | undefined> extends infer TValue
-    ? TValue extends IpcError<infer TName, infer TData, infer TStatus>
-      ? IpcErrorPayload<TName, TData, TStatus>
+    ? TValue extends IpcError<infer TName, infer TData>
+      ? IpcErrorPayload<TName, TData>
       : TValue extends IpcResponse
         ? TValue extends { error: infer TError }
           ? TError
@@ -161,6 +159,55 @@ export interface StandardSchemaV1<TParams = unknown, TOutput = TParams> {
 export type AnySchema = StandardSchemaV1<any, any>;
 export type InferSchemaOutput<TSchema> =
   TSchema extends StandardSchemaV1<any, infer T> ? T : unknown;
+export type EventSchema = Record<string, AnySchema>;
+export type EventSchemaInput<TEvents extends Record<string, unknown>> = {
+  [K in keyof TEvents]: TEvents[K] extends AnySchema ? TEvents[K] : never;
+};
+export type EventPayload<TSchema> = InferSchemaOutput<TSchema>;
+export interface EventDefinition<TName extends string = string, TPayload = unknown> {
+  (listener: (payload: TPayload) => void): () => void;
+  readonly __ipcoraEvent: true;
+  readonly name: TName;
+  readonly channel: string;
+  readonly once: boolean;
+  readonly payload: TPayload;
+}
+export type EventDefinitions<TEvents extends EventSchema> = Expand<
+  {
+    [K in keyof TEvents & string as `on${Capitalize<K>}`]: EventDefinition<
+      K,
+      EventPayload<TEvents[K]>
+    >;
+  } & {
+    [K in keyof TEvents & string as `onOnce${Capitalize<K>}`]: EventDefinition<
+      K,
+      EventPayload<TEvents[K]>
+    >;
+  }
+>;
+export type EventNames<TDefinition> = TDefinition extends object
+  ? {
+      [K in keyof TDefinition]: TDefinition[K] extends EventDefinition<infer TName, any>
+        ? TName
+        : never;
+    }[keyof TDefinition]
+  : never;
+export type EventPayloadByName<TDefinition, TName extends string> = TDefinition extends object
+  ? {
+      [K in keyof TDefinition]: TDefinition[K] extends EventDefinition<TName, infer TPayload>
+        ? TPayload
+        : never;
+    }[keyof TDefinition]
+  : never;
+export interface EventEmitOptions {
+  peers?: Iterable<IpcPeer | number>;
+}
+export type EventEmitter<TDefinition> = {
+  [K in EventNames<TDefinition> & string]: (
+    payload: EventPayloadByName<TDefinition, K>,
+    options?: EventEmitOptions,
+  ) => Promise<void>;
+};
 export type HookReturnExtension<TReturn> = [TReturn] extends [never]
   ? {}
   : Exclude<Awaited<TReturn>, void | undefined> extends infer TExtension
@@ -193,6 +240,7 @@ export interface IpcAdapter<TEvent extends IpcEvent = IpcEvent> {
     channel: string,
     handler: (event: TEvent, request: IpcRequest) => MaybePromise<IpcResponse>,
   ): void;
+  emit(channel: string, sender: TEvent['sender'], payload: unknown): MaybePromise<void>;
   listenerCount(channel: string): number;
   removeHandler(channel: string): void;
 }
@@ -268,7 +316,6 @@ export type OnErrorHook<TContext extends object, TStore extends object> = (
     cause: unknown;
     name: string;
     error: IpcError;
-    statusCode?: number;
     phase: LifecyclePhase;
   },
 ) => MaybePromise<IpcResponse | IpcError | void>;
@@ -452,11 +499,13 @@ export type MacroObjectExtension<TDefinitions extends Record<string, AnyMacroEnt
 export interface BuiltInHandlerOptions<
   TParamsSchema extends AnySchema | undefined = undefined,
   TOutputSchema extends AnySchema | undefined = undefined,
+  TMetadataSchema extends AnySchema | undefined = undefined,
   TContext extends object = object,
   TStore extends object = object,
 > {
   params?: TParamsSchema;
   output?: TOutputSchema;
+  metadata?: TMetadataSchema;
   onRequest?: OnRequestHook<TContext, TStore>;
   onTransform?: OnTransformHook<TContext, TStore>;
   derive?: DeriveHook<TContext, TStore>;
@@ -472,16 +521,19 @@ export interface BuiltInHandlerOptions<
 export type HandlerOptions<
   TParamsSchema extends AnySchema | undefined = undefined,
   TOutputSchema extends AnySchema | undefined = undefined,
+  TMetadataSchema extends AnySchema | undefined = undefined,
   TContext extends object = object,
   TStore extends object = object,
   TMacros extends MacroRegistry = {},
-> = BuiltInHandlerOptions<TParamsSchema, TOutputSchema, TContext, TStore> & MacroOptions<TMacros>;
+> = BuiltInHandlerOptions<TParamsSchema, TOutputSchema, TMetadataSchema, TContext, TStore> &
+  MacroOptions<TMacros>;
 
 export interface HandlerDefinition<TContext extends object, TStore extends object> {
   path: string;
   handler: HandlerFunction<any, any, TContext, TStore>;
   paramsSchema?: AnySchema;
   outputSchema?: AnySchema;
+  metadataSchema?: AnySchema;
   middleware: IpcMiddleware<TContext, TStore>[];
   hooks: HookStore<TContext, TStore>;
 }

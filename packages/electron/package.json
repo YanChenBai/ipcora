@@ -22,11 +22,26 @@
       "dev": "./src/index.ts",
       "default": "./dist/index.mjs"
     },
+    "./main": {
+      "dev": "./src/main.ts",
+      "default": "./dist/main.mjs"
+    },
+    "./preload": {
+      "dev": "./src/preload.ts",
+      "default": "./dist/preload.mjs"
+    },
+    "./renderer": {
+      "dev": "./src/renderer.ts",
+      "default": "./dist/renderer.mjs"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
     "exports": {
       ".": "./dist/index.mjs",
+      "./main": "./dist/main.mjs",
+      "./preload": "./dist/preload.mjs",
+      "./renderer": "./dist/renderer.mjs",
       "./package.json": "./package.json"
     },
     "access": "public"
@@ -35,22 +50,21 @@
     "build": "vp pack",
     "typecheck": "tsc --noEmit",
     "dev": "vp pack --watch",
-    "test": "vp run @ipcora/core#build && vp test",
+    "test": "vp run ipcora#build && vp test",
     "check": "vp check",
     "prepublishOnly": "vp run build"
-  },
-  "dependencies": {
-    "@ipcora/core": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "bumpp": "catalog:",
     "electron": "catalog:",
+    "ipcora": "workspace:^",
     "typescript": "catalog:",
     "vite-plus": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "electron": ">=40.0.0"
+    "electron": ">=40.0.0",
+    "ipcora": "workspace:^"
   }
 }

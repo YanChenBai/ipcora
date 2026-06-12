@@ -1,23 +1,56 @@
+import type { EventDefinition } from './types';
+
 type AnyFunction = (...args: any[]) => any;
-type DefinitionOf<T> = T extends { readonly definition: infer TDefinition } ? TDefinition : T;
+type NoInferType<T> = [T][T extends any ? 0 : never];
+type Expand<T> = { [K in keyof T]: T[K] } & {};
+export type InferDefinition<T extends { readonly definition: object }> = T['definition'];
 type ResultOf<T> =
   Awaited<T> extends { data: unknown; error: unknown }
     ? Awaited<T>
     : { data: Awaited<T>; error: null };
 
-type ClientMetadata = Record<string, unknown>;
+export type ClientMetadata = Record<string, unknown>;
+export type Unsubscribe = () => void;
+export type EventListener<TPayload> = (payload: TPayload) => void;
+export interface EventSubscriber<TPayload> {
+  (listener: EventListener<TPayload>): Unsubscribe;
+}
+type EventDefinitionLike<TPayload = unknown> = EventDefinition<string, TPayload> & {
+  readonly __ipcoraEvent: true;
+  readonly name: string;
+  readonly channel: string;
+  readonly once: boolean;
+  readonly payload: TPayload;
+};
 
-type Client<T> = T extends AnyFunction
+export type InvokeClient<T> = T extends AnyFunction
   ? Parameters<T> extends []
     ? (metadata?: ClientMetadata) => Promise<ResultOf<ReturnType<T>>>
     : (...args: [...Parameters<T>, metadata?: ClientMetadata]) => Promise<ResultOf<ReturnType<T>>>
-  : T extends object
-    ? {
-        [K in keyof T]: Client<T[K]>;
-      }
-    : never;
+  : T extends EventDefinitionLike
+    ? never
+    : T extends object
+      ? {
+          [K in keyof T as T[K] extends EventDefinitionLike ? never : K]: InvokeClient<T[K]>;
+        }
+      : never;
 
-interface ClientCall {
+export type EventClient<T> = T extends object
+  ? {
+      [K in keyof T as T[K] extends EventDefinitionLike ? K : never]: T[K] extends {
+        readonly payload: infer TPayload;
+      }
+        ? EventSubscriber<TPayload>
+        : never;
+    }
+  : never;
+
+export interface Client<T> {
+  invoke: Expand<InvokeClient<T>>;
+  event: Expand<EventClient<T>>;
+}
+
+export interface ClientCall {
   /**
    * Full path segments.
    *
@@ -62,8 +95,9 @@ type MetadataHook = (
   call: Omit<ClientCall, 'metadata'>,
 ) => Record<string, unknown> | Promise<Record<string, unknown>>;
 
-interface CreateClientOptions {
+export interface CreateClientOptions {
   invoke(call: ClientCall): unknown | Promise<unknown>;
+  subscribe?(call: ClientSubscription): Unsubscribe;
 
   /** Static metadata merged into every call (lowest priority). */
   metadata?: Record<string, unknown>;
@@ -72,20 +106,34 @@ interface CreateClientOptions {
   onMetadata?: MetadataHook;
 }
 
-export function createClient<TDefinition extends object>(
-  definition: TDefinition,
-  options: CreateClientOptions,
-): Client<DefinitionOf<TDefinition>> {
-  return createProxy({
-    node: getDefinitionNode(definition),
-    path: [],
-    invoke: options.invoke,
-    staticMetadata: options.metadata,
-    onMetadata: options.onMetadata,
-  }) as Client<DefinitionOf<TDefinition>>;
+export interface ClientSubscription {
+  event: string;
+  channel: string;
+  once: boolean;
+  listener: (payload: unknown) => void;
 }
 
-interface ProxyContext {
+export function createClient<TDefinition extends object = never>(
+  definition: NoInferType<TDefinition>,
+  options: CreateClientOptions,
+): Client<TDefinition> {
+  return {
+    invoke: createInvokeProxy({
+      node: definition,
+      path: [],
+      invoke: options.invoke,
+      staticMetadata: options.metadata,
+      onMetadata: options.onMetadata,
+    }),
+    event: createEventProxy({
+      node: definition,
+      path: [],
+      subscribe: options.subscribe,
+    }),
+  } as Client<TDefinition>;
+}
+
+interface InvokeProxyContext {
   node: unknown;
   path: string[];
   invoke: CreateClientOptions['invoke'];
@@ -93,7 +141,13 @@ interface ProxyContext {
   onMetadata?: MetadataHook;
 }
 
-function createProxy(context: ProxyContext): unknown {
+interface EventProxyContext {
+  node: unknown;
+  path: string[];
+  subscribe?: CreateClientOptions['subscribe'];
+}
+
+function createInvokeProxy(context: InvokeProxyContext): unknown {
   const target = function clientProxyTarget() {};
 
   return new Proxy(target, {
@@ -128,7 +182,11 @@ function createProxy(context: ProxyContext): unknown {
 
       const childNode = Reflect.get(context.node, property);
 
-      return createProxy({
+      if (isEventDefinition(childNode)) {
+        throw new TypeError(`"${formatPath([...context.path, property])}" is an IPC event`);
+      }
+
+      return createInvokeProxy({
         node: childNode,
         path: [...context.path, property],
         invoke: context.invoke,
@@ -191,6 +249,87 @@ function createProxy(context: ProxyContext): unknown {
   });
 }
 
+function createEventSubscriber(
+  definition: EventDefinitionLike,
+  subscribe: CreateClientOptions['subscribe'],
+): (listener: (payload: unknown) => void) => Unsubscribe {
+  return listener => {
+    if (!subscribe) {
+      throw new TypeError('Client subscribe adapter is required for IPC events');
+    }
+
+    let unsubscribe: Unsubscribe = () => {};
+    const wrappedListener = definition.once
+      ? (payload: unknown) => {
+          unsubscribe();
+          listener(payload);
+        }
+      : listener;
+
+    unsubscribe = subscribe({
+      event: definition.name,
+      channel: definition.channel,
+      once: definition.once,
+      listener: wrappedListener,
+    });
+    return unsubscribe;
+  };
+}
+
+function createEventProxy(context: EventProxyContext): unknown {
+  const target = function clientEventProxyTarget() {};
+
+  return new Proxy(target, {
+    get(_target, property) {
+      if (property === 'then') {
+        return undefined;
+      }
+
+      if (property === Symbol.toStringTag) {
+        return 'IpcoraEventClient';
+      }
+
+      if (typeof property !== 'string') {
+        return undefined;
+      }
+
+      if (!isNamespaceNode(context.node)) {
+        throw new TypeError(`"${formatPath(context.path)}" is not an event namespace`);
+      }
+
+      if (!(property in context.node)) {
+        throw new TypeError(`Unknown event path: "${formatPath([...context.path, property])}"`);
+      }
+
+      const childNode = Reflect.get(context.node, property);
+
+      if (isEventDefinition(childNode)) {
+        return createEventSubscriber(childNode, context.subscribe);
+      }
+
+      return createEventProxy({
+        node: childNode,
+        path: [...context.path, property],
+        subscribe: context.subscribe,
+      });
+    },
+
+    apply() {
+      throw new TypeError(
+        `"${formatPath(context.path)}" is an event namespace and cannot be called`,
+      );
+    },
+  });
+}
+
+function isEventDefinition(value: unknown): value is EventDefinitionLike {
+  return (
+    value !== null &&
+    typeof value === 'function' &&
+    (value as { __ipcoraEvent?: unknown }).__ipcoraEvent === true
+  );
+}
+
 function normalizeResult(value: unknown): { data: unknown; error: unknown } {
   if (isResult(value)) return value;
 
@@ -213,14 +352,6 @@ function isResult(value: unknown): value is { data: unknown; error: unknown } {
   return value !== null && typeof value === 'object' && 'data' in value && 'error' in value;
 }
 
-function getDefinitionNode(definition: object): object {
-  if ('definition' in definition) {
-    const node = definition.definition;
-    if (node && typeof node === 'object') return node;
-  }
-  return definition;
-}
-
 function isNamespaceNode(value: unknown): value is Record<PropertyKey, unknown> {
   return value !== null && typeof value === 'object';
 }
@@ -230,7 +361,7 @@ function formatPath(path: string[]): string {
 }
 
 async function resolveMetadata(
-  context: ProxyContext,
+  context: InvokeProxyContext,
   call: Omit<ClientCall, 'metadata'>,
   perCallMetadata?: Record<string, unknown>,
 ): Promise<Record<string, unknown> | undefined> {

@@ -4,10 +4,8 @@
 export class IpcError<
   TName extends string = string,
   TData = unknown,
-  TStatus extends number = number,
 > extends Error {
   readonly data?: TData;
-  readonly status?: TStatus;
 
   constructor(
     name: TName,
@@ -15,47 +13,41 @@ export class IpcError<
       message?: string;
       data?: TData;
       cause?: unknown;
-      status?: TStatus;
     },
   ) {
     super(options?.message ?? name, { cause: options?.cause });
     this.name = name;
     this.data = options?.data;
-    this.status = options?.status;
   }
 }
 
-export interface IpcErrorOptions<TData = undefined, TStatus extends number = number> {
+export interface IpcErrorOptions<TData = undefined> {
   message?: string;
   data?: TData;
   cause?: unknown;
-  status?: TStatus;
 }
 
 export function fail<const TName extends string>(name: TName): IpcError<TName, undefined>;
 export function fail<
   const TName extends string,
   const TMessage extends string,
-  const TStatus extends number = number,
 >(
   name: TName,
   message: TMessage,
-  options?: IpcErrorOptions<undefined, TStatus>,
-): IpcError<TName, undefined, TStatus>;
+  options?: IpcErrorOptions<undefined>,
+): IpcError<TName, undefined>;
 export function fail<
   const TName extends string,
   const TData,
-  const TStatus extends number = number,
->(name: TName, options: IpcErrorOptions<TData, TStatus>): IpcError<TName, TData, TStatus>;
+>(name: TName, options: IpcErrorOptions<TData>): IpcError<TName, TData>;
 export function fail<
   const TName extends string,
   const TData,
-  const TStatus extends number = number,
 >(
   name: TName,
   message: string,
-  options: IpcErrorOptions<TData, TStatus>,
-): IpcError<TName, TData, TStatus>;
+  options: IpcErrorOptions<TData>,
+): IpcError<TName, TData>;
 export function fail(
   name: string,
   messageOrOptions?: string | IpcErrorOptions,

@@ -5,13 +5,12 @@ export default defineConfig({
     {
       entry: {
         index: './src/index.ts',
+        client: './src/client.ts',
+        event: './src/event.ts',
       },
       platform: 'node',
       format: 'esm',
       dts: true,
-      exports: {
-        devExports: 'dev',
-      },
     },
   ],
   test: {

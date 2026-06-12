@@ -1,5 +1,5 @@
 {
-  "name": "ipcora-workspace",
+  "name": "@ipcora/monorepo",
   "version": "0.3.0",
   "private": true,
   "description": "Workspace for ipcora packages.",

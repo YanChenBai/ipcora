@@ -1,5 +1,5 @@
 {
-  "name": "@ipcora/core",
+  "name": "ipcora",
   "version": "0.3.0",
   "description": "Transport-agnostic typed IPC router for TypeScript.",
   "homepage": "https://github.com/YanChenBai/ipcora#readme",
@@ -11,7 +11,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/YanChenBai/ipcora.git",
-    "directory": "packages/core"
+    "directory": "packages/ipcora"
   },
   "files": [
     "dist"
@@ -19,14 +19,27 @@
   "type": "module",
   "exports": {
     ".": {
+      "types": "./dist/index.d.mts",
       "dev": "./src/index.ts",
       "default": "./dist/index.mjs"
+    },
+    "./client": {
+      "types": "./dist/client.d.mts",
+      "dev": "./src/client.ts",
+      "default": "./dist/client.mjs"
+    },
+    "./event": {
+      "types": "./dist/event.d.mts",
+      "dev": "./src/event.ts",
+      "default": "./dist/event.mjs"
     },
     "./package.json": "./package.json"
   },
   "publishConfig": {
     "exports": {
       ".": "./dist/index.mjs",
+      "./client": "./dist/client.mjs",
+      "./event": "./dist/event.mjs",
       "./package.json": "./package.json"
     },
     "access": "public"

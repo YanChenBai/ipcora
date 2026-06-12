@@ -4,6 +4,7 @@ import type { AnySchema, HookStore } from './types';
 export const builtInHandlerOptionKeys = new Set([
   'params',
   'output',
+  'metadata',
   'onRequest',
   'onTransform',
   'derive',
