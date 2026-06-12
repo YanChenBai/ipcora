@@ -1,6 +1,6 @@
-import { contextBridge, ipcRenderer } from "electron";
-import type { IpcRendererEvent } from "electron";
-import type { IpcRequest, IpcResponse } from "ipcora";
+import { contextBridge, ipcRenderer } from 'electron';
+import type { IpcRendererEvent } from 'electron';
+import type { IpcRequest, IpcResponse } from 'ipcora';
 
 export interface ExposeIpcoraBridgeOptions {
   /** The ipcora channel name (must match what the main process uses). */
@@ -11,10 +11,7 @@ export interface ExposeIpcoraBridgeOptions {
 
 export interface IpcoraBridge {
   invoke(request: IpcRequest): Promise<IpcResponse>;
-  subscribe(
-    eventChannel: string,
-    listener: (payload: unknown) => void,
-  ): () => void;
+  subscribe(eventChannel: string, listener: (payload: unknown) => void): () => void;
 }
 
 declare global {
@@ -35,17 +32,14 @@ declare global {
  * ```
  */
 export function exposeIpcoraBridge(options: ExposeIpcoraBridgeOptions): void {
-  const apiKey = options.apiKey ?? "__IPCORA__";
+  const apiKey = options.apiKey ?? '__IPCORA__';
   const channel = options.channel;
 
   contextBridge.exposeInMainWorld(apiKey, {
     invoke(request: IpcRequest): Promise<IpcResponse> {
       return ipcRenderer.invoke(channel, request);
     },
-    subscribe(
-      eventChannel: string,
-      listener: (payload: unknown) => void,
-    ): () => void {
+    subscribe(eventChannel: string, listener: (payload: unknown) => void): () => void {
       const handler = (_event: IpcRendererEvent, payload: unknown) => {
         listener(payload);
       };

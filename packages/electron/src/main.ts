@@ -1,14 +1,14 @@
-import { createIpcora } from "ipcora";
-import type { IpcEvent, Ipcora, IpcAdapter, IpcoraOptions, IpcPeer, IpcRequest } from "ipcora";
-import type { BrowserWindow, IpcMain, IpcMainInvokeEvent, WebContents } from "electron";
+import type { BrowserWindow, IpcMain, IpcMainInvokeEvent, WebContents } from 'electron';
+import { createIpcora } from 'ipcora';
+import type { IpcEvent, Ipcora, IpcAdapter, IpcoraOptions, IpcPeer, IpcRequest } from 'ipcora';
 
 export type ElectronIpcEvent = IpcMainInvokeEvent & IpcEvent<WebContents>;
 
-export type ElectronIpcMain = Pick<IpcMain, "handle" | "listenerCount" | "removeHandler">;
+export type ElectronIpcMain = Pick<IpcMain, 'handle' | 'listenerCount' | 'removeHandler'>;
 
 export type ElectronIpcAdapter = IpcAdapter<ElectronIpcEvent>;
 
-export interface ElectronIpcoraOptions extends Omit<IpcoraOptions, "adapter"> {
+export interface ElectronIpcoraOptions extends Omit<IpcoraOptions, 'adapter'> {
   ipcMain: ElectronIpcMain;
 }
 
@@ -51,7 +51,7 @@ export function createBrowserWindowPeer(window: BrowserWindow): ElectronIpcPeer 
     sender: window.webContents,
     window,
     onDispose(dispose) {
-      window.once("closed", dispose);
+      window.once('closed', dispose);
     },
   };
 }

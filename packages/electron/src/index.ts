@@ -3,11 +3,11 @@ export {
   createElectronIpcora,
   createBrowserWindowPeer,
   bindBrowserWindow,
-} from "./main";
+} from './main';
 export type {
   ElectronIpcEvent,
   ElectronIpcMain,
   ElectronIpcAdapter,
   ElectronIpcoraOptions,
   ElectronIpcPeer,
-} from "./main";
+} from './main';

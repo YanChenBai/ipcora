@@ -1,14 +1,17 @@
-import { createClient, type Client, type CreateClientOptions } from "ipcora/client";
-import type { InferDefinition } from "ipcora/client";
-import type { IpcoraBridge } from "./preload";
+import { createClient, type Client, type CreateClientOptions } from 'ipcora/client';
+import type { InferDefinition } from 'ipcora/client';
+
+import type { IpcoraBridge } from './preload';
 
 export type { Client, CreateClientOptions, InferDefinition };
 
 /**
  * Options for {@link createIpcoraClient}.
  */
-export interface CreateIpcoraClientOptions
-  extends Pick<CreateClientOptions, "metadata" | "onMetadata"> {
+export interface CreateIpcoraClientOptions extends Pick<
+  CreateClientOptions,
+  'metadata' | 'onMetadata'
+> {
   /** Key on `window` where the preload bridge is exposed. @default "__IPCORA__" */
   apiKey?: string;
 }
@@ -49,7 +52,7 @@ export function createIpcoraClient<TDefinition extends object>(
   definition: TDefinition,
   options?: CreateIpcoraClientOptions,
 ): Client<TDefinition> {
-  const apiKey = options?.apiKey ?? "__IPCORA__";
+  const apiKey = options?.apiKey ?? '__IPCORA__';
   const bridge = getBridge(apiKey);
 
   return createClient<TDefinition>(definition, {

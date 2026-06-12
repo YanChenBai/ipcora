@@ -143,10 +143,7 @@ describe('@ipcora/electron/preload', () => {
 
     // unsubscribe
     unsub();
-    expect(ipcRendererRemove).toHaveBeenCalledWith(
-      'app:ipc:event:update',
-      expect.any(Function),
-    );
+    expect(ipcRendererRemove).toHaveBeenCalledWith('app:ipc:event:update', expect.any(Function));
   });
 
   test('supports custom apiKey', async () => {
@@ -219,9 +216,9 @@ describe('@ipcora/electron/renderer', () => {
 
     // Definition with params (arity > 0)
     const definition = {
-      getUser: ((_params: { id: string }) => {}) as unknown as (
-        params: { id: string },
-      ) => Promise<{ data: { id: string }; error: null }>,
+      getUser: ((_params: { id: string }) => {}) as unknown as (params: {
+        id: string;
+      }) => Promise<{ data: { id: string }; error: null }>,
     };
 
     const client = createIpcoraClient<typeof definition>(definition);
